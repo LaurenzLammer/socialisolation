@@ -1,0 +1,37 @@
+---
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Computer Modern", font.size = 9)
+setwd("/data/pt_life/ResearchProjects/LLammer/Results/mediation/fit_indices/")
+df <- read.csv("overview.csv")
+colnames(df) <- c("fit index", "311", "ok_311", "312", "ok_312", "411a", "ok_411a", "412a", "ok_412a", "411b", "ok_411b", "412b", "ok_412b", "411c", "ok_411c", "412c", "ok_412c")
+df[3,1] <- "p-value"
+df[,c(2,4,6,8,10,12,14,16)] <- round(df[,c(2,4,6,8,10,12,14,16)], digits = 3)
+df1 <- df[,c(1,2,3,6,7,10,11,14,15)]
+df2 <- df[,c(1,4,5,8,9,12,13,16,17)]
+flextable(df1) %>%
+  theme_vanilla() %>%
+  set_header_labels(ok_311 = "ok?", ok_411a = "ok?", ok_411b = "ok?", ok_411c = "ok?") %>%
+  add_header_row(values = "Fit indices of mediation analyses of model 1", colwidths = 9) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("chisq, chi squared; df, degrees of freedom", "311: Indirect effect of social isolation on hippocampal volume via chronic stress", "411a: Indirect effect of social isolation on executive functions via hippocampal volume", "411b: Indirect effect of social isolation on memory via hippocampal volume", "411c: Indirect effect of social isolation on processing speed via hippocampal volume" )) 
+  
+  
+  
+flextable(df2) %>%
+  theme_vanilla() %>%
+  set_header_labels(ok_312 = "ok?", ok_412a = "ok?", ok_412b = "ok?", ok_412c = "ok?") %>%
+  add_header_row(values = "Fit indices of mediation analyses of model 2", colwidths = 9) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("chisq, chi squared; df, degrees of freedom", "312: Indirect effect of social isolation on hippocampal volume via chronic stress", "412a: Indirect effect of social isolation on executive functions via hippocampal volume", "412b: Indirect effect of social isolation on memory via hippocampal volume", "412c: Indirect effect of social isolation on processing speed via hippocampal volume" )) 
+  
+```
+
