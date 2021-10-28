@@ -4,16 +4,18 @@ library(ggplot2)
 library(cowplot)
 library(ggplotify)
 
+# a function that will create three complex scatterplots (baseline social isolation, change in social isolation, baseline age) for the requested dependent variable and model
 comp_plot <- function(dv, model = 1){
   if(dv == "HCV"){
     datax <- subset(data, data$outlier_HCV != 1)
     y_axis_label <- "Hippocampal volume in mm^3"
     x_axis_label <- rep("", 3)
     x_lab_height <- 0.2
-    y_value <- 4750
-    y_value2 <- 4650
+    y_value <- 4750 # position for asterisks (significance before FDR)
+    y_value2 <- 4650 # position for asterisks (significance after FDR)
     if(model == 1){
       hyp <- list111
+      # get the p-/q-values for baseline social isolation and change in social isolation
       pb <- qval1$pvalues[1]
       qb <- qval1$qvalues[1]
       pc <- qval1$pvalues[2] 
@@ -194,6 +196,7 @@ comp_plot <- function(dv, model = 1){
     theme_bw() +
     xlim(-22,12) +
     labs(y= y_axis_label, x= x_axis_label[3])
+  # create pie charts to visualise the Bayes factors of the full and null model
   pie1 <- ggplot(df1, aes(x="", y=bf, fill=model)) +
     theme_void() + theme(legend.position="none") +
     geom_bar(stat="identity", width=1) +
@@ -212,11 +215,12 @@ comp_plot <- function(dv, model = 1){
   return(all)
   }
 
-
+# create plots for all dependent variables
 q1 <- comp_plot(dv = "HCV") + theme(plot.margin=margin(b=-0.7,unit="cm"))
 q2 <- comp_plot(dv = "exfunct") + theme(plot.margin=margin(b=-0.7,unit="cm"))
 q3 <- comp_plot(dv = "memo") + theme(plot.margin=margin(b=-0.7,unit="cm"))
 q4 <- comp_plot(dv = "procspeed")
+# arrange the plots to get one composite plot
 plots <- plot_grid(q1, q2, q3, q4, ncol = 1, nrow = 4) 
 ggsave(filename = "/data/pt_life/ResearchProjects/LLammer/Results/visualisation/model1_scatterplots.tff", device = "tiff", dpi = 600, width = 8, height = 12.8)
 
