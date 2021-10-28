@@ -1,14 +1,7 @@
-# -*- coding: utf-8 -*-
-"""
-Spyder Editor
-
-This is a temporary script file.
-"""
-
+import os
 list = open("/data/hu_lammer/Desktop/list.txt", "r")
 listo = list.read().splitlines()
 print(listo)
-import os
 for subj in listo:
     if "_fu" in subj:
         temp = subj[:-3]
