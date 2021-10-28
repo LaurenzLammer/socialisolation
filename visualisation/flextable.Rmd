@@ -1,0 +1,91 @@
+---
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Computer Modern", font.size = 9)
+setwd("/data/pt_life/ResearchProjects/LLammer/Results/coefficients/")
+df <- read.csv("overview_full.csv")
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[,4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF > 9999.999, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 3))
+df_hcv <- subset(df, df$dv == "Hippo-\ncampal Volume")
+df_cog <- subset(df, df$dv != "Hippo-\ncampal Volume")
+df_hcv <- df_hcv[c(1:4,6:9),]
+df_cog <- df_cog[c(1:4,6:9,16:19,21:24,31:34,36:39),]
+flextable(df_hcv, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value", "FDR.corrected", "BF")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value = "p-value", FDR.corrected = "FDR", CI95 = "95% CI") %>%
+  merge_at(i=1:8,j=1) %>% 
+  merge_at(i=1:4,j=2) %>% 
+  merge_at(i=5:8,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.2)) %>%
+  add_header_row(values = "Adjusted Regression Coefficients and Measures of Significance", colwidths = 8) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_row(values = c("p<0.05, BF>3", "p<0.01, BF>10", "p<0.001, BF>30", "p<0.0001, BF>100"),
+                 colwidths = c(2,2,2,2)) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("Social isolation significantly predicts hippocampal volume after multiplicity control. Bayes Factors provide strong evidence in favour of the alternative hypotheses for baseline social isolation and anecdotal to moderate evidence for change in social isolation. The effect size of one point on the  LSNS is equivalent to a baseline age difference of around two and a half months.") %>%
+  color(i = 1, j=c(1,3,5,7), color = c("olivedrab1", "olivedrab2", "olivedrab3", "olivedrab4"), part = "footer") %>%
+  bg(i = ~ p.value < 0.05, j = "p.value", bg = "olivedrab1") %>%
+  bg(i = ~ p.value < 0.01, j = "p.value", bg = "olivedrab2") %>%
+  bg(i = ~ p.value < 0.001, j = "p.value", bg = "olivedrab3") %>%
+  bg(i = ~ grepl("e-", p.value), j = "p.value", bg = "olivedrab4") %>%
+  bg(i = ~ FDR.corrected < 0.05, j = "FDR.corrected", bg = "olivedrab1") %>%
+  bg(i = ~ FDR.corrected < 0.01, j = "FDR.corrected", bg = "olivedrab2") %>%
+  bg(i = ~ FDR.corrected < 0.001, j = "FDR.corrected", bg = "olivedrab3") %>%
+  bg(i = ~ grepl("e-", FDR.corrected), j = "FDR.corrected", bg = "olivedrab4") %>%
+  bg(i = ~ as.numeric(BF) > 3, j = "BF", bg = "olivedrab1") %>%
+  bg(i = ~ as.numeric(BF) > 10, j = "BF", bg = "olivedrab2") %>%
+  bg(i = ~ as.numeric(BF) > 30, j = "BF", bg = "olivedrab3") %>%
+  bg(i = ~ as.numeric(BF) > 100, j = "BF", bg = "olivedrab4") %>%
+  bg(i = ~ grepl("e+", BF), j = "BF", bg = "olivedrab4")
+
+flextable(df_cog, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value", "FDR.corrected", "BF")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value = "p-value", FDR.corrected = "FDR", CI95 = "95% CI") %>%
+  merge_at(i=1:8,j=1) %>%
+  merge_at(i=9:16,j=1) %>%
+  merge_at(i=17:24,j=1) %>%
+  merge_at(i=1:4,j=2) %>% 
+  merge_at(i=5:8,j=2) %>%
+  merge_at(i=9:12,j=2) %>% 
+  merge_at(i=13:16,j=2) %>%
+  merge_at(i=17:20,j=2) %>% 
+  merge_at(i=21:24,j=2) %>%
+  width(j = c(2,5), width = c(0.4,1.2)) %>%
+  add_header_row(values = "Adjusted Regression Coefficients and Measures of Significance", colwidths = 8) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_row(values = c("p<0.05, BF>3", "p<0.01, BF>10", "p<0.001, BF>30", "p<0.0001, BF>100"),
+                 colwidths = c(2,2,2,2)) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("Baseline social isolation significantly predicts cognitive functions after FDR-correction and BFs provide very strong to decisive evidence in favour of the alternative hypotheses. Only for model 2 of memory evidence is weak. No association of change in social isolation with executive functions is detected and evidence for associations with memory and processing speed are limited.") %>%
+  color(i = 1, j=c(1,3,5,7), color = c("olivedrab1", "olivedrab2", "olivedrab3", "olivedrab4"), part = "footer") %>%
+  bg(i = ~ p.value < 0.05, j = "p.value", bg = "olivedrab1") %>%
+  bg(i = ~ p.value < 0.01, j = "p.value", bg = "olivedrab2") %>%
+  bg(i = ~ p.value < 0.001, j = "p.value", bg = "olivedrab3") %>%
+  bg(i = ~ grepl("e-", p.value), j = "p.value", bg = "olivedrab4") %>%
+  bg(i = ~ FDR.corrected < 0.05, j = "FDR.corrected", bg = "olivedrab1") %>%
+  bg(i = ~ FDR.corrected < 0.01, j = "FDR.corrected", bg = "olivedrab2") %>%
+  bg(i = ~ FDR.corrected < 0.001, j = "FDR.corrected", bg = "olivedrab3") %>%
+  bg(i = ~ grepl("e-", FDR.corrected), j = "FDR.corrected", bg = "olivedrab4") %>%
+  bg(i = ~ as.numeric(BF) > 3, j = "BF", bg = "olivedrab1") %>%
+  bg(i = ~ as.numeric(BF) > 10, j = "BF", bg = "olivedrab2") %>%
+  bg(i = ~ as.numeric(BF) > 30, j = "BF", bg = "olivedrab3") %>%
+  bg(i = ~ as.numeric(BF) > 100, j = "BF", bg = "olivedrab4") %>%
+  bg(i = ~ grepl("e+", BF), j = "BF", bg = "olivedrab4")
+
+```
+
