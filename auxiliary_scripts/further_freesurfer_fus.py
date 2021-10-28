@@ -103,10 +103,5 @@ for i in fu_subjects:
               file=open("/data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/further_fus_condorscript", "a"))
 
 
-for i in fu_subjects:
-    file = "/data/pt_life_freesurfer/freesurfer_all/" + i + "_temp/scripts/IsRunning.lh+rh"
-    if path.exists(file):
-        remove(file)
-    else:
-        print("The file of ", i, "does not exist")
+
 
