@@ -11,7 +11,8 @@ library(flextable)
 library(tidyverse)
 set_flextable_defaults(font.family = "Computer Modern", font.size = 9)
 setwd("/data/pt_life/ResearchProjects/LLammer/Results/coefficients/")
-df <- read.csv("overview_full.csv")
+df <- read.csv("overview_full.csv") #load results of lmes
+# prepare dataframe
 df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
            rep("Processing Speed", 15))
 df[,4:8] <- round(df[,4:8], digits = 3)
@@ -21,6 +22,7 @@ df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, dig
 df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
                            round(df$FDR.corrected, digits = 4))
 df$BF <- ifelse(df$BF > 9999.999, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 3))
+# subset dataframe to have 1 table for hippocampal volume and cognitive functions each
 df_hcv <- subset(df, df$dv == "Hippo-\ncampal Volume")
 df_cog <- subset(df, df$dv != "Hippo-\ncampal Volume")
 df_hcv <- df_hcv[c(1:4,6:9),]
