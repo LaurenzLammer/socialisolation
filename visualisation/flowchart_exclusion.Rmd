@@ -111,8 +111,6 @@ df[df$fu == 1,] <- df[df$fu == 1,] %>%
     TRUE ~ 0))
 ```
 
-This concise but comprehensive flowchart for baseline and followup?
-
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 grViz("digraph flowchart {
 node [shape = rectangle, width = 8, fillcolor = Antiquewhite, style = filled, fontsize = 30]
