@@ -1,4 +1,4 @@
-declare -a StringArray=( "74A8D1F7CB" )
+declare -a StringArray=( "subjectID" )
 for subj in ${StringArray[@]}; 
 do
 
