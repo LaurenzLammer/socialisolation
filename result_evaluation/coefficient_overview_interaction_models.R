@@ -1,3 +1,4 @@
+# prepare dataframe
 setwd("/data/pt_life/ResearchProjects/LLammer/Results/coefficients/")
 coefficient_overview <- data.frame(matrix(ncol = 13, nrow = 17*4))
 colnames(coefficient_overview) <- c("dv", "model", "predictor", "estimate", "standard error",
@@ -8,7 +9,7 @@ coefficient_overview$model <- c(rep(1,6), rep(2,11))
 coefficient_overview$predictor <- c( "LSNS_base*age_change", "LSNS_base", "LSNS_change", "age_base", "age_change", "sex", 
                                      "LSNS_base*age_change", "LSNS_base", "LSNS_change", "age_base", "age_change", "sex", 
                                      "BMI", "CESD", "diabetes", "education", "hypertension")
-
+# load results of lmes and copy the results into the dataframe
 file_list <- list.files(pattern = "LSNS_base:age_change")
 files <- lapply(file_list, read.csv)
 names(files) <- lapply(file_list, function(x) substr(x, 1, nchar(x)-4))
