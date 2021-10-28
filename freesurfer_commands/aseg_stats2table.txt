@@ -1,0 +1,1 @@
+asegstats2table --qdec-long /data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec1.dat --meas volume --tablefile /data/pt_life/ResearchProjects/LLammer/Data/aseg_stats.txt
