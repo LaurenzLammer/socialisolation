@@ -1,0 +1,65 @@
+---
+output:
+  html_document: default
+  word_document: default
+  pdf_document: default
+---
+# Descriptive Statistics
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(gtsummary)
+library(tidyverse)
+library(readxl)
+library(lme4)
+
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_full_data.csv")
+
+data <- data %>%
+  rename(
+    TICS = TICS_sum,
+    CESD = CESD_sum,
+    BMI = BMI_BMI
+  )
+
+# remove subjects that did not actually participate in follow-up
+data <- subset(data, data$fu == 0 | (data$fu == 1 &(!is.na(data$LSNS_DATUM) | !is.na(data$MRT_DATUM) | !is.na(data$mediz_an.time_stamp) |
+                                                      !is.na(data$TMT_DATUM) | !is.na(data$CERAD_DATUM))))
+
+
+qdec <- read.delim("/data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/all_subs_aseg_stats.txt", sep = "")
+qdec$mrt_pseudonym <- substr(qdec$Measure.volume, 1, 10)
+qdec$fu <- ifelse("_fu" != substr(qdec$Measure.volume, 11, 13), 0, 1)
+pseudo <- read_excel("/data/pt_life/ResearchProjects/LLammer/Data/PV573_PV-MRT-Pseudonymliste.xlsx")
+qdec <- merge(qdec, pseudo, by = "mrt_pseudonym", all.x = T)
+mean_TIV <- mean(qdec$EstimatedTotalIntraCranialVol)
+qdec$HCV_mean <- (qdec$Right.Hippocampus + qdec$Left.Hippocampus)/2
+res <- lmer(HCV_mean ~ EstimatedTotalIntraCranialVol + (1|mrt_pseudonym), data = qdec)
+sres <- summary(res)
+beta <- sres$coefficients[2]
+qdec$HCV <- qdec$HCV_mean - beta * (qdec$EstimatedTotalIntraCranialVol - mean_TIV)
+colnames(qdec)[67] <- "SIC"
+data <- merge(data, qdec, by = c("SIC", "fu"), all.x = T)
+data$fu <- ifelse(data$fu == 0, "BL", "FU")
+data$pandemic <- ifelse(as.Date(data$LSNS_DATUM) >= as.Date("2020-03-22"), 1, 0)
+data %>%
+  select(fu, sex, age_base, age_change, LSNS_base, LSNS_change, HCV, BMI, hypertension, diabetes, education, CESD, HCV, memo, procspeed, exfunct, TICS, pandemic) %>%
+  rename(
+    "baseline age" = age_base,
+    "change in age" = age_change,
+    "baseline LSNS" = LSNS_base,
+    "change in LSNS" = LSNS_change,
+    "memory" = memo,
+    "processing speed" = procspeed,
+    "executive functions" = exfunct,
+    gender = sex
+  ) %>%
+tbl_summary(by = fu,
+            statistic = c(`baseline age`, `change in age`, BMI, CESD, `baseline LSNS`, `change in LSNS`, HCV, memory, 
+                          `processing speed`, `executive functions`, TICS) ~ "{mean} ({sd}) | {min} | {max} | {N_miss}",
+            type = list(CESD ~ 'continuous'), missing = "no") %>%
+  modify_header(label ~ "Variable      ") %>%
+  modify_footnote(update = all_stat_cols() ~ "n (%); Mean (SD) | minimum | maximum | n missing\n\nHCV = hippocampal volume; BMI, body-mass-index; LSNS, Lubben Social Network Scale; TICS, Trierer Inventar zum chroischen Stress; CESD, Center for Epidemiological Studies Depression Scale; gender: 1 = male; education: 1 = no tertiary education")
+```
+
