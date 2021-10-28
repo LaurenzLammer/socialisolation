@@ -1,0 +1,11 @@
+mris_preproc --qdec-long /data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec1.dat --target fsaverage --hemi lh --meas thickness --out /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack1.mgh
+mri_surf2surf --hemi lh --s fsaverage --sval /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack1.mgh --tval /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack1.fwhm10.mgh --fwhm-trg 10 --cortex --noreshape
+
+mris_preproc --qdec-long /data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec1.dat --target fsaverage --hemi rh --meas thickness --out /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack1.mgh
+mri_surf2surf --hemi rh --s fsaverage --sval /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack1.mgh --tval /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack1.fwhm10.mgh --fwhm-trg 10 --cortex --noreshape
+
+mris_preproc --qdec-long /data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec2.dat --target fsaverage --hemi lh --meas thickness --out /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack2.mgh
+mri_surf2surf --hemi lh --s fsaverage --sval /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack2.mgh --tval /data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack2.fwhm10.mgh --fwhm-trg 10 --cortex --noreshape
+
+mris_preproc --qdec-long /data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec2.dat --target fsaverage --hemi rh --meas thickness --out /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack2.mgh
+mri_surf2surf --hemi rh --s fsaverage --sval /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack2.mgh --tval /data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack2.fwhm10.mgh --fwhm-trg 10 --cortex --noreshape
