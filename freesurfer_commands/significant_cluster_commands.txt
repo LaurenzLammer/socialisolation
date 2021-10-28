@@ -1,0 +1,24 @@
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_121.mgh --thmin 3.99343618613454 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_121.txt --annot aparc --no-fixmni 
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_121.mgh --thmin 3.99343618613454 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_121.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_122.mgh --thmin 6.70268479452397 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_122.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_122.mgh --thmin 6.70268479452397 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_122.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_141.mgh --thmin 3.65354258172978 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_141.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_141.mgh --thmin 3.65354258172978 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_141.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_142.mgh --thmin 3.99422481748145 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_142.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_142.mgh --thmin 3.99422481748145 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_142.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_161.mgh --thmin 4.97952389593074 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_161.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_161.mgh --thmin 4.97952389593074 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_161.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_spval_162.mgh --thmin 4.55613458516473 --hemi rh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/rh_clusters_162.txt --annot aparc --no-fixmni
+
+mri_surfcluster --in /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_spval_162.mgh --thmin 4.55613458516473 --hemi lh --srcsubj fsaverage --sum /data/pt_life/ResearchProjects/LLammer/Results/whole_brain/lh_clusters_162.txt --annot aparc --no-fixmni
+
