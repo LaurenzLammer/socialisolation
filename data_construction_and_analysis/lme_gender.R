@@ -55,7 +55,7 @@ write.csv(vifres, file = paste0(path, "/VIFs/HCV_on_LSNS_base:age_change_model1.
 # unfortunately, we cannot expect that
 # hence, we will calculate the VIFs for every single model
 
-# to accelerate computation time we will to calculate bayesian statistics for this sensitivity analysis
+# to accelerate computation time we will not calculate bayesian statistics for this sensitivity analysis
 
 # create a histogram and a qq-plot of residuals & plot residuals against fitted values
 # save plots
