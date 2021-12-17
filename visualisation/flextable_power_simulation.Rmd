@@ -1,0 +1,44 @@
+---
+title: "Untitled"
+author: "LL"
+date: "9/6/2021"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/Analysis/Power_Simulation/")
+df1 <- read.csv("summary_sided.csv") # overview with BF-threshold = 3
+df1 <- df1[c(1:3, 8:10),] # only select relevant rows
+df2 <- read.csv("summary2_sided.csv") # overview with BF-threshold = 10.75
+df2 <- df2[c(1:3, 8:10),] # only select relevant rows
+colnames(df1) <- c("Category", "BFA0b > 3 in %", "3 >= BFA0b >= 1/3 in %", "BFA0b < 1/3 in %",
+                   "BFA0c > 3 in %", "3 >= BFA0c >= 1/3 in %", "BFA0c < 1/3 in %", "n")
+colnames(df2) <- c("Category", "BFA0b > 10.75 in %", "10.75 >= BFA0b >= 1/3 in %", "BFA0b < 1/3 in %",
+                   "BFA0c > 10.75 in %", "10.75 >= BFA0c >= 1/3 in %", "BFA0c < 1/3 in %", "n")
+df1[,2:7] <- round(df1[,2:7], digits = 2)
+df2[,2:7] <- round(df2[,2:7], digits = 2)
+
+flextable(df1) %>%
+  theme_vanilla() %>%
+  width(j = 1, width = 2) %>%
+  add_header_lines("Results of Power Simulation of Bayes Factors", ) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("BFA0b, Sided Bayes factor in favour of the alternative hypothesis of baseline social isolation; BFA0c, Sided Bayes factor in favour of the alternative hypothesis of change in social isolation; n, number of simulations in the category; model 1, model with reduced number of control variables; model 2, model with full number of control variables; effect, effect size per point in the Lubben Social Network Scale in years of baseline age" ,"Percentages of Bayes Factors giving moderate or stronger evidence in favour of the alternative hypothesis (>3), giving anecdotal evidence (3>=BF>=1/3) and giving moderate or stronger evidence in favour of the null hypothesis (< 1/3)"))
+
+flextable(df2) %>%
+  theme_vanilla() %>%
+  width(j = 1, width = 2) %>%
+  add_header_lines("Adjusted thresholds for a family of 12 tests") %>%
+    add_header_lines("Results of Power Simulation of Bayes Factors") %>%
+    fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("BFA0b, Sided Bayes factor in favour of the alternative hypothesis of baseline social isolation; BFA0c, Sided Bayes factor in favour of the alternative hypothesis of change in social isolation; n, number of simulations in the category; model 1, model with reduced number of control variables; model 2, model with full number of control variables; effect, effect size per point in the Lubben Social Network Scale in years of baseline age",
+                              "Percentages of Bayes Factors giving moderate or stronger evidence in favour of the alternative hypothesis (>10.75), giving anecdotal evidence (10.75>=BF>=1/3) and giving moderate or stronger evidence in favour of the null hypothesis (< 1/3)"))
+
+
+```
