@@ -1,0 +1,31 @@
+---
+title: "Untitled"
+author: "LL"
+date: "9/6/2021"
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+---
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/Analysis/Simulation/")
+df <- read.csv("over_thresh.csv") # overview with BFs over threshold of 3
+df <- df[,c(2,6)] # only keep relevant columns
+colnames(df) <- c("BFA0", "FWER")
+df$n <- 1:nrow(df)
+df$BFA0 <- round(df$BFA0, digits = 3)
+df$FWER <- round(df$FWER*100, digits = 2)
+
+flextable(df) %>%
+  theme_vanilla() %>%
+  set_header_labels(FWER = "FWER in %") %>%
+  add_header_lines("Bayes Factors over the threshold of 3") %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  width(width = 1.25) %>%
+  add_footer_lines(values = c("BFA0, Sided Bayes factor in favour of the alternative hypothesis; FWER, familywise error rate if the threshold would be set just below BFA0" ,"In the simulation with randomly simulated values for our predictors of interest, 14 BFs exceeded the standard threshold of three. Given a family size of 12 tests, a threshold of 10.75 would maintain the FWER below 5%."))
+
+```
