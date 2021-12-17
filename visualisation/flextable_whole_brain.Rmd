@@ -1,0 +1,29 @@
+---
+title: "Untitled"
+author: "LL"
+date: "9/10/2021"
+output:
+  word_document: default
+  html_document: default
+---
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+setwd("/data/pt_life/ResearchProjects/LLammer/Results/whole_brain/")
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+df <- read.csv("cluster_overview.csv")
+df$Max <- 10^-df$Max # convert p-values from FreeSurfer format (-log10(p)) to standard format
+df$Max <- format(df$Max, scientific = T, digits = 2)
+df$hemi <- ifelse(grepl("rh", df$model), "rh", "lh")
+df$poi <- ifelse(grepl("121", df$model), "LSNS_base", "LSNS_change")
+df$model <- substr(df$model, 15, 15)
+df <- df[c(5:15,1:4),c(13,12,11,3,5,9,1)] # sort rows and sort and select relevant columns
+flextable(df) %>%
+  theme_vanilla() %>%
+  set_header_labels(hemi = "hemisphere", Max = "maximum p-value", Size.mm.2. = "size in mm²", Annot = "cortical region") %>%
+  add_header_row(values = "FDR-corrected clusters of reduced cortical thickness significantly associated with social isolation", colwidths = 7) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("poi, predictor of interest; MNIX/Y/Z, MNI305 x/y/z coordinates of the maximumn; NVtxs, Number of vertices constituting the cluster; LSNS_base, baseline social isolation; LSNS_change, change in social isolation; rh, right hemisphere; lh, left hemisphere", "full model 1: cortical thickness ~ LSNS_base + LSNS_change + age_base + age_change + sex", "full model 2: model 1 + hypertension + diabetes + education + depression + BMI"))
+```
