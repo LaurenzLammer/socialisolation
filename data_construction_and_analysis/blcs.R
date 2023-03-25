@@ -2,9 +2,11 @@ library(lavaan)
 library(tidyverse)
 library(semPlot)
 
-data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data.csv")
-setwd("/data/pt_life/ResearchProjects/LLammer/Results_blcs")
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_blcs")
 df <- reshape(data, idvar = "subject", timevar = "fu", direction = "wide")
+df$HCV.1 <- scale(df$HCV.1)
+df$HCV.0 <- scale(df$HCV.0)
 
 BLCS<-'
 
@@ -35,7 +37,7 @@ LSNS_sum.0 ~~  HCV.0     # This estimates the bl LSNS bl HCV covariance
 dLSNS1~~dHCV1          # This estimates the dLSNS and dHCV covariance
 '
 
-fitBLCS <- lavaan(BLCS, data=df, estimator='mlr',fixed.x=FALSE)
+fitBLCS <- lavaan(BLCS, data=df, estimator='ml', missing = "fiml", fixed.x=FALSE)
 sum_hcv <- summary(fitBLCS, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
 
 BLCS2<-'
@@ -67,7 +69,7 @@ LSNS_sum.0 ~~  exfunct.0     # This estimates the bl LSNS bl HCV covariance
 dLSNS1~~dexfunct1          # This estimates the dLSNS and dHCV covariance
 '
 
-fitBLCS2 <- lavaan(BLCS2, data=df, estimator='mlr',fixed.x=FALSE)
+fitBLCS2 <- lavaan(BLCS2, data=df, estimator='ml', missing = "fiml", fixed.x=FALSE)
 sum_exfunct <- summary(fitBLCS2, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
 
 BLCS3<-'
@@ -99,7 +101,7 @@ LSNS_sum.0 ~~  memo.0     # This estimates the bl LSNS bl memo covariance
 dLSNS1~~dmemo1          # This estimates the dLSNS and dmemo covariance
 '
 
-fitBLCS3 <- lavaan(BLCS3, data=df, estimator='mlr',fixed.x=FALSE)
+fitBLCS3 <- lavaan(BLCS3, data=df, estimator='ml', missing = "fiml", fixed.x=FALSE)
 sum_memo <- summary(fitBLCS3, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
 
 BLCS4<-'
@@ -131,14 +133,7 @@ LSNS_sum.0 ~~  procspeed.0     # This estimates the bl LSNS bl procspeed covaria
 dLSNS1~~dprocspeed1          # This estimates the dLSNS and dprocspeed covariance
 '
 
-fitBLCS4 <- lavaan(BLCS4, data=df, estimator='mlr',fixed.x=FALSE)
+fitBLCS4 <- lavaan(BLCS4, data=df, estimator='ml', missing = "fiml",fixed.x=FALSE)
 sum_procspeed <- summary(fitBLCS4, fit.measures=TRUE, standardized=TRUE, rsquare=TRUE)
 
-tiff("semplot.tff", width = 480*1.62, height = 480, res = 300)
-semPaths(fitBLCS, layout = "circle2", intercepts = F, residuals = F ,sizeMan = 12, sizeLat = 12, nCharNodes = 0, color = "white", 
-         edge.color = c("black", "black","black","black","blue","black","blue","black","black","black"), 
-         nodeLabels = c("HCV_FU", "LSNS_FU", "HCV_BL", "LSNS_BL", 
-                        expression(paste(Delta, "HCV")), expression(paste(Delta, "LSNS"))),
-         sizeMan2 = 12, sizeLat2 = 12, as.expression = "nodes")
-dev.off()
-save.image("blcs.RData")
+save.image("blcs_fiml.RData")
