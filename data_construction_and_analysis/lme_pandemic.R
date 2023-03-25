@@ -1,18 +1,18 @@
-library("lme4") # 1.1-26
+library("lme4") # 1.1-31
 library("lmerTest") # 3.1-3
 # ensure that lmerTest doesn't mask lmer, which would cause us multiple problems
 lmer <- lme4::lmer
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/diagnostic_fcns.r")
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/glmm_stability.r")
-library("BayesFactor") #0.9.1.4.2
-library(car) #3.0-10
-library(BiocManager) # 1.30.12
-library(qvalue) # 2.18.0
-library(doMC) #1.3.7
+library("BayesFactor") #0.9.1.4.4
+library(car) #3.1-1
+library(BiocManager) # 1.30.19
+library(qvalue) # 2.30.0
+library(doMC) #1.3.8
 
 ### import longitudinal dataset & set path variable 
-data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data.csv")
-path = "/data/pt_life/ResearchProjects/LLammer/Results/pand"
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
+path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_pand"
 #make subject a factor to please BayeysFactor
 data$subject <- as.factor(data$subject)
 
@@ -357,4 +357,4 @@ for(n in (1:length(BF$model))){
 
 write.csv(BF, file = paste0(path, "/bayes_factor/bayes_factors.csv"))
 
-save.image(file = paste0(path, "/Workspace/workspace2.RData"))
+save.image(file = paste0(path, "/Workspace/workspace.RData"))
