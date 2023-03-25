@@ -1,5 +1,5 @@
 library(lavaan)
-load("/data/pt_life/ResearchProjects/LLammer/Results/mediation/Workspace/workspace.RData")
+load("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/Workspace/workspace_fiml.RData")
 overview <- data.frame(matrix(nrow = 10, ncol = 16))
 colnames(overview) <- c("311","311","312","312","411a","411a","411b","411b","411c","411c","412a","412a","412b","412b","412c","412c")
 rownames(overview) <- c("chisq", "df", "pvalue", "chisq/df", "rmsea", "rmsea_lower", "rmsea_upper", "srmr", "nnfi", "cfi")
@@ -68,29 +68,29 @@ fit_check <- function(fit){
   res <- list(values, evaluations)
   return(res)
 }
-res <- fit_check(fit311)
+res <- fit_check(fimlfit311)
 overview[,1] <- res[[1]]
 overview[,2] <- res[[2]]
-res <- fit_check(fit312)
+res <- fit_check(fimlfit312)
 overview[,3] <- res[[1]]
 overview[,4] <- res[[2]]
-res <- fit_check(fit411a)
+res <- fit_check(fimlfit411a)
 overview[,5] <- res[[1]]
 overview[,6] <- res[[2]]
-res <- fit_check(fit411b)
+res <- fit_check(fimlfit411b)
 overview[,7] <- res[[1]]
 overview[,8] <- res[[2]]
-res <- fit_check(fit411c)
+res <- fit_check(fimlfit411c)
 overview[,9] <- res[[1]]
 overview[,10] <- res[[2]]
-res <- fit_check(fit412a)
+res <- fit_check(fimlfit412a)
 overview[,11] <- res[[1]]
 overview[,12] <- res[[2]]
-res <- fit_check(fit412b)
+res <- fit_check(fimlfit412b)
 overview[,13] <- res[[1]]
 overview[,14] <- res[[2]]
-res <- fit_check(fit412c)
+res <- fit_check(fimlfit412c)
 overview[,15] <- res[[1]]
 overview[,16] <- res[[2]]
 
-write.csv(overview, "/data/pt_life/ResearchProjects/LLammer/Results/mediation/fit_indices/overview.csv")
+write.csv(overview, "/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/fit_indices/overview_fiml.csv")
