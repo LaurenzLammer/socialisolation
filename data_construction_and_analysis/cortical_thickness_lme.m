@@ -1,12 +1,12 @@
 % change workind directory
-cd '/data/pt_life/ResearchProjects/LLammer/Results/whole_brain'
+cd '/data/pt_life/ResearchProjects/LLammer/si_update/Results_whole_brain'
 
 % add FreeSurfer LME path
-addpath(genpath('/afs/cbs.mpg.de/software/freesurfer/6.0.0p1/ubuntu-xenial-amd64/matlab/'));
+addpath(genpath('/afs/cbs.mpg.de/software/freesurfer/7.3.2/debian-bullseye-amd64/matlab/'));
 
 % load stacked thickness data of all subjects and timepoints for both hemispheres 
-[lY1,lmri1] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack1.fwhm10.mgh');
-[rY1,rmri1] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack1.fwhm10.mgh');
+[lY1,lmri1] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/si_update/Data/lh.thickness.stack1.fwhm10.mgh');
+[rY1,rmri1] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/si_update/Data/rh.thickness.stack1.fwhm10.mgh');
 
 % load fsaverage data to mask etc.
 lhsphere = fs_read_surf('/data/pt_life_freesurfer/freesurfer_all/fsaverage/surf/lh.sphere');
@@ -15,7 +15,7 @@ rhsphere = fs_read_surf('/data/pt_life_freesurfer/freesurfer_all/fsaverage/surf/
 rhcortex = fs_read_label('/data/pt_life_freesurfer/freesurfer_all/fsaverage/label/rh.cortex.label');
 
 % load table of predictor variables
-data1 = fReadQdec('/data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec1.dat');
+data1 = fReadQdec('/data/pt_life/ResearchProjects/LLammer/si_update/Analysis/Preprocessing/long_qdec1.dat');
 sID1 = data1(2:end,2); % identify how many timepoints per subject are in the data
 data1 = rmQdecCol(data1,1);
 data1 = rmQdecCol(data1,1); %remove columns
@@ -33,14 +33,14 @@ pths = table('Size', [1 6], 'VariableTypes', ["double", "double", "double", "dou
 X1 = [ones(length(M1),1) M1(:,1) M1(:,2) M1(:,3) M1(:,4) M1(:,5)]; 
 
 % fit vertex-wise LME model with random intercepts
-lhstats1 = lme_mass_fit_vw(X1, [1], lY1, ni1, lhcortex);
-rhstats1 = lme_mass_fit_vw(X1, [1], rY1, ni1, rhcortex);
+lhstats1 = lme_mass_fit_vw(X1, [1], lY1, ni1, lhcortex,"x",1);
+rhstats1 = lme_mass_fit_vw(X1, [1], rY1, ni1, rhcortex,"x",1);
 
 % contrast matrix for H1.2.1
 CM_121.C = [0 0 0 0 1 0];
 
-F_lhstats_121 = lme_mass_F(lhstats1, CM_121);
-F_rhstats_121 = lme_mass_F(rhstats1, CM_121);
+F_lhstats_121 = lme_mass_F(lhstats1, CM_121, 1);
+F_rhstats_121 = lme_mass_F(rhstats1, CM_121, 1);
 
 %%% 
 
@@ -48,6 +48,9 @@ F_rhstats_121 = lme_mass_F(rhstats1, CM_121);
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_121,lmri1,'lhsig_121.mgh','sig');
 fs_write_fstats(F_rhstats_121,rmri1,'rhsig_121.mgh','sig');
+fs_write_fstats(F_lhstats_121,lmri1,'lhf_121.mgh','fval');
+fs_write_fstats(F_rhstats_121,rmri1,'rhf_121.mgh','fval');
+
 
 % save coefficient map for baseline social isolation
 nv=length(lhstats1);
@@ -105,12 +108,14 @@ fs_write_Y(rh_sided_pval_121,rmri1_1,'rh_spval_121.mgh');
 % contrast matrix for H1.4.1
 CM_141.C = [0 0 0 0 0 1];
 
-F_lhstats_141 = lme_mass_F(lhstats1, CM_141);
-F_rhstats_141 = lme_mass_F(rhstats1, CM_141);
+F_lhstats_141 = lme_mass_F(lhstats1, CM_141, 1);
+F_rhstats_141 = lme_mass_F(rhstats1, CM_141, 1);
 
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_141,lmri1,'lhsig_141.mgh','sig');
 fs_write_fstats(F_rhstats_141,rmri1,'rhsig_141.mgh','sig');
+fs_write_fstats(F_lhstats_141,lmri1,'lhf_141.mgh','fval');
+fs_write_fstats(F_rhstats_141,rmri1,'rhf_141.mgh','fval');
 
 % save coefficient map for change in social isolation
 nv=length(lhstats1);
@@ -178,6 +183,8 @@ F_rhstats_161 = lme_mass_F(rhstats_int_1, CM_161);
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_161,lmri1,'lhsig_161.mgh','sig');
 fs_write_fstats(F_rhstats_161,rmri1,'rhsig_161.mgh','sig');
+fs_write_fstats(F_lhstats_161,lmri1,'lhf_161.mgh','fval');
+fs_write_fstats(F_rhstats_161,rmri1,'rhf_161.mgh','fval');
 
 % save coefficient map for the baseline social isolation - change in age interaction
 nv=length(lhstats_int_1);
@@ -231,11 +238,11 @@ fs_write_Y(rh_sided_pval_161,rmri1_1,'rh_spval_161.mgh');
 % this qdec table and stack only includes observations without NAs in CESD. Henceforth, it is a bit smaller.
 
 % load stacked thickness data of all subjects and timepoints for both hemispheres 
-[lY2,lmri2] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/Data/lh.thickness.stack2.fwhm10.mgh');
-[rY2,rmri2] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/Data/rh.thickness.stack2.fwhm10.mgh');
+[lY2,lmri2] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/si_update/Data/lh.thickness.stack2.fwhm10.mgh');
+[rY2,rmri2] = fs_read_Y('/data/pt_life/ResearchProjects/LLammer/si_update/Data/rh.thickness.stack2.fwhm10.mgh');
 
 % load table of predictor variables
-data2 = fReadQdec('/data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/long_qdec2.dat');
+data2 = fReadQdec('/data/pt_life/ResearchProjects/LLammer/si_update/Analysis/Preprocessing/long_qdec2.dat');
 sID2 = data2(2:end,2); % identify how many timepoints per subject are in the data
 data2 = rmQdecCol(data2,1);
 data2 = rmQdecCol(data2,1); %remove columns
@@ -261,6 +268,8 @@ F_rhstats_122 = lme_mass_F(rhstats2, CM_122);
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_122,lmri2,'lhsig_122.mgh','sig');
 fs_write_fstats(F_rhstats_122,rmri2,'rhsig_122.mgh','sig');
+fs_write_fstats(F_lhstats_122,lmri2,'lhf_122.mgh','fval');
+fs_write_fstats(F_rhstats_122,rmri2,'rhf_122.mgh','fval');
 
 % save coefficient map for the baseline social isolation 
 nv=length(lhstats2);
@@ -325,6 +334,8 @@ F_rhstats_142 = lme_mass_F(rhstats2, CM_142);
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_142,lmri2,'lhsig_142.mgh','sig');
 fs_write_fstats(F_rhstats_142,rmri2,'rhsig_142.mgh','sig');
+fs_write_fstats(F_lhstats_142,lmri2,'lhf_142.mgh','fval');
+fs_write_fstats(F_rhstats_142,rmri2,'rhf_142.mgh','fval');
 
 % save coefficient map for the change in social isolation 
 nv=length(lhstats2);
@@ -395,6 +406,8 @@ F_rhstats_162 = lme_mass_F(rhstats_int_2, CM_162);
 % write non-FDR-corrected significance map to current directory
 fs_write_fstats(F_lhstats_162,lmri2,'lhsig_162.mgh','sig');
 fs_write_fstats(F_rhstats_162,rmri2,'rhsig_162.mgh','sig');
+fs_write_fstats(F_lhstats_162,lmri2,'lhf_162.mgh','fval');
+fs_write_fstats(F_rhstats_162,rmri2,'rhf_162.mgh','fval');
 
 % save coefficient map for the baseline social isolation - change in age interaction
 nv=length(lhstats_int_2);
