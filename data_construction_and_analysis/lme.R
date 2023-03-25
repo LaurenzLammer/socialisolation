@@ -1,30 +1,48 @@
-library("lme4") # 1.1-26
+library("lme4") # 1.1-31
 library("lmerTest") # 3.1-3
 # ensure that lmerTest doesn't mask lmer, which would cause us multiple problems
 lmer <- lme4::lmer
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/diagnostic_fcns.r")
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/glmm_stability.r")
-library("BayesFactor") #0.9.1.4.2
-library(car) #3.0-10
-library(BiocManager) # 1.30.12
-library(qvalue) # 2.18.0
-library(doMC) #1.3.7
+library("BayesFactor") #0.9.12.4.4
+library(car) #3.1-1
+library(BiocManager) # 1.30.19
+library(qvalue) # 2.30.0
+library(doMC) #1.3.8
 
-# change this variable to "less_excl" or "change_check" if performing the respective sensitivity analysis
+# change this variable to "less_excl" or "change_check" or etc. if performing the respective sensitivity analysis
 variable <- "original"
 ### import longitudinal dataset, set path variable & modify dataset if necessary
 if(variable == "original"){
-  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data.csv")
-  path = "/data/pt_life/ResearchProjects/LLammer/Results"
+  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
+  path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results"
 } else if(variable == "less_excl"){
-  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data_less_excluded.csv")
-  path = "/data/pt_life/ResearchProjects/LLammer/Results_less_excl"
-  } else{
-  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data_change_check.csv")
+  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data_less_excl.csv")
+  path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_less_excl"
+  } else if(variable == "change_check"){
+  data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data_change_check.csv")
   data <- subset(data, !is.na(data$age_within) & !is.na(data$LSNS_within))
   data[,c("LSNS_change", "age_change")] <- data[,c("LSNS_within", "age_within")]
-  path = "/data/pt_life/ResearchProjects/LLammer/Results_change_check"
-}
+  path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_change_check"
+  } else if(variable == "bp140"){
+    data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data_bp140.csv")
+    path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_bp140"
+  } else if(variable == "mmst27"){
+    data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data_mmst27.csv")
+    path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_mmst27"
+  } else if(variable == "wave_stand"){
+    data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data_wave_stand.csv")
+    path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_wave_stand"
+  } else if(variable == "cut_off"){
+    data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
+    path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_cut_off"
+    # turn LSNS into categorical variables using the standard cut-off (cave: scores are "inverted")
+    # scores indicating social isolation are coded as 1
+    # LSNS_change now is the change in category 
+    data$LSNS_base <- ifelse(data$LSNS_base > 18, 1, 0)
+    data$LSNS_change <- ifelse(data$LSNS_sum > 18, 1- data$LSNS_base, 0- data$LSNS_base) 
+  } 
+
 #make subject a factor to please BayeysFactor
 data$subject <- as.factor(data$subject)
 
@@ -369,4 +387,4 @@ for(n in (1:length(BF$model))){
 
 write.csv(BF, file = paste0(path, "/bayes_factor/bayes_factors.csv"))
 
-save.image(file = paste0(path, "/Workspace/workspace2.RData"))
+save.image(file = paste0(path, "/Workspace/workspace.RData"))
