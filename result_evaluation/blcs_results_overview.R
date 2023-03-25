@@ -1,12 +1,13 @@
 library(BiocManager)
 library(qvalue)
+library(lavaan)
 
-setwd("/data/pt_life/ResearchProjects/LLammer/Results_blcs")
-load(file = "blcs.RData")
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_blcs")
+load(file = "blcs_fiml.RData")
 overview <- data.frame(matrix(nrow = 8, ncol = 10))
 colnames(overview) <- c("dv", "predictor", "estimate", "se", "z-value", "p.value", "sided_p.value", "q_value", "significant", "n")
 n <- 1
-for(sum in list(sum_hcv$PE, sum_exfunct$PE, sum_memo$PE, sum_procspeed$PE)){
+for(sum in list(sum_hcv$pe, sum_exfunct$pe, sum_memo$pe, sum_procspeed$pe)){
   overview[n,c(1:6,10)] <- sum[17,c(1,3,5:8)]
   overview[n+1,c(1:6,10)] <- sum[19,c(1,3,5:8)]
   n <- n + 2
@@ -26,4 +27,4 @@ overview[c(1,3,5,7), "q_value"] <- lsns_q$qvalues
 overview[c(1,3,5,7), "significant"] <- lsns_q$significant
 overview[c(2,4,6,8), "q_value"] <- reverse_q$qvalues
 overview[c(2,4,6,8), "significant"] <- reverse_q$significant
-write.csv(overview, "overview.csv", row.names = F)
+write.csv(overview, "overview_fiml.csv", row.names = F)
