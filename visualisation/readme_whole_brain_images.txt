@@ -1,0 +1,4 @@
+We manually revised the images to produce the figures found in our manuscript.
+In order to condensate the information for our readers, we added two of the original images as produced by the python code for each figure.
+We also adapted the colourbars for unstandardized betas to make them only depict values that were actually in the data (nilearn automatically produces colourbars that are symmetrical around 0 for such figures).
+Furthermore, we cropped the F-value colourbars to remove the non-significant F-values (originally shown in monotonous grey) and let the colourbars represent the significant F-values more clearly. 
