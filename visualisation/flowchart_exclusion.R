@@ -1,19 +1,9 @@
----
-output:
-  html_document: default
-  pdf_document: default
-always_allow_html: true
----
-# Flowcharts
-
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(tidyverse)
 library(lme4)
 library(DiagrammeR)
-library(webshot2)
 
-setwd("/data/pt_life/ResearchProjects/LLammer/Results/descriptive_stats/")
-df <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_full_data.csv")
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results/descriptive_stats/")
+df <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_full_data.csv")
 df <- subset(df, !is.na(df$LSNS_sum)) 
 length1 <- nrow(df)
 length1_fu <- length(which(df$fu == 1))
@@ -109,9 +99,7 @@ df[df$fu == 1,] <- df[df$fu == 1,] %>%
     diff(c(HCV_adj, mean(HCV_adj, na.rm = T))) >= 3*sd(HCV_adj, na.rm = T) ~ 1,
     is.na(HCV_adj) ~ NA_real_,
     TRUE ~ 0))
-```
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
 grViz("digraph flowchart {
 node [shape = rectangle, width = 8, fillcolor = Antiquewhite, style = filled, fontsize = 30]
 a [label = '@@1', width = 8, height = 1.25]
@@ -144,8 +132,8 @@ h -> r -> s -> t;
 }
 
 [1]: paste(paste0('MRI subsample, >49a, with LSNS (n = ', length1, ')'), paste0('BL = ', length1 - length1_fu, '  |  ', 'FU = ', length1_fu), sep = '\\n')
-[2]: paste(paste0('lesions and tumors (n = ', length1 - length2, ')'), paste0('BL = ', (length1 - length1_fu) - (length2 - length2_fu), '  |  ', 'FU = ', length1_fu - length2_fu), paste0('history of stroke (n = ', length2 -length3, ')'), paste0('BL = ', (length2 - length2_fu) - (length3 - length3_fu), '  | ', 'FU = ', length2_fu - length3_fu), paste0('recent cancer treatment (n = ', length3 - length4, ')'), paste0('BL = ', (length3 - length3_fu) - (length4 - length4_fu), '  | ', 'FU = ', length3_fu - length4_fu), paste0('neurological diseases (n = ', length4 -length5, ')'), paste0('BL = ', (length4 - length4_fu) - (length5 - length5_fu), '  | ', 'FU = ', length4_fu - length5_fu), paste0('cognitive impairement (n = ', length5 - length6, ')'), paste0('BL = ', (length5 - length5_fu) - (length6 - length6_fu), '  | ', 'FU = ', length5_fu - length6_fu), paste0('centrally active medication (n = ', length6 - length7, ')'), paste0('BL = ', (length6 - length6_fu) - (length7 - length7_fu), '  | ', 'FU = ', length6_fu - length7_fu), sep = '\\n')
-[3]: paste(paste0('no LSNS outlier (n = ', length8, ')'), paste0('BL = ', length8 - length8_fu, '  |  ', 'FU = ', length8_fu), sep = '\\n')
+[2]: paste(paste0('lesions and tumors (n = ', length1 - length2, ')'), paste0('BL = ', (length1 - length1_fu) - (length2 - length2_fu), '  |  ', 'FU = ', length1_fu - length2_fu), paste0('history of stroke (n = ', length2 -length3, ')'), paste0('BL = ', (length2 - length2_fu) - (length3 - length3_fu), '  | ', 'FU = ', length2_fu - length3_fu), paste0('recent cancer treatment (n = ', length3 - length4, ')'), paste0('BL = ', (length3 - length3_fu) - (length4 - length4_fu), '  | ', 'FU = ', length3_fu - length4_fu), paste0('neurological diseases (n = ', length4 -length5, ')'), paste0('BL = ', (length4 - length4_fu) - (length5 - length5_fu), '  | ', 'FU = ', length4_fu - length5_fu), paste0('cognitive impairement (n = ', length5 - length6, ')'), paste0('BL = ', (length5 - length5_fu) - (length6 - length6_fu), '  | ', 'FU = ', length5_fu - length6_fu), paste0('centrally active medication (n = ', length6 - length7, ')'), paste0('BL = ', (length6 - length6_fu) - (length7 - length7_fu), '  | ', 'FU = ', length6_fu - length7_fu), paste0('LSNS outlier (n = ', length7 - length8, ')'), paste0('BL = ', (length7 - length7_fu) - (length8 - length8_fu), '  | ', 'FU = ', length7_fu - length8_fu), sep = '\\n')
+[3]: paste(paste0('eligble participants (n = ', length8, ')'), paste0('BL = ', length8 - length8_fu, '  |  ', 'FU = ', length8_fu), sep = '\\n')
 [4]: paste(paste0('usable MRI (n = ', length(which(df$FS_usable == 1)) , ')'), paste0('BL = ', length(which(df$FS_usable == 1 & df$ fu == 0)), '   |  ', 'FU = ', length(which(df$FS_usable == 1 & df$fu == 1))), sep = '\\n')
 [5]: paste(paste0('no HCV outlier (n = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1)), ')'), paste0('BL = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1 & df$fu == 0)), '  |  ', 'FU = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1 & df$fu == 1))), sep = '\\n')
 [6]: paste(paste0('all control variables for model 2 (n = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1 & !is.na(df$CESD_sum))), ')'), paste0('BL = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1 & !is.na(df$CESD_sum) & df$fu == 0)), '  |  ', 'FU = ', length(which(df$FS_usable == 1 & df$outlier_HCV != 1 & !is.na(df$CESD_sum) & df$fu == 1))), sep = '\\n')
@@ -159,5 +147,4 @@ h -> r -> s -> t;
 [14]: paste(paste0('no processing speed outlier (n = ', length(which(df$outlier_procspeed != 1)), ')'), paste0('BL = ', length(which(df$outlier_procspeed != 1 & df$ fu == 0)), '  |  ', 'FU = ', length(which(df$outlier_procspeed != 1 & df$ fu == 1))), sep = '\\n')
 [15]: paste(paste0('all control variables for model 2 (n = ', length(which(df$outlier_procspeed != 1 & !is.na(df$CESD_sum))), ')'), paste0('BL = ', length(which(df$outlier_procspeed != 1 & !is.na(df$CESD_sum) & df$fu == 0)), '  |  ', 'FU = ', length(which(df$outlier_procspeed != 1 & !is.na(df$CESD_sum) & df$fu == 1))), sep = '\\n')
 ")
-```
 
