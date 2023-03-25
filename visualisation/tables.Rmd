@@ -1,0 +1,1390 @@
+---
+title: "tables"
+author: "LL"
+date: "2023-03-03"
+output:
+  word_document: default
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+## Tables
+
+Descriptive Statistics for key variables
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(gtsummary)
+library(tidyverse)
+library(readxl)
+library("lme4")
+
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_full_data.csv")
+
+data <- data %>%
+  rename(
+    TICS = TICS_sum,
+    CESD = CESD_sum,
+    BMI = BMI_BMI
+  )
+
+# remove subjects that did not actually participate in follow-up
+data <- subset(data, data$fu == 0 | (data$fu == 1 &(!is.na(data$LSNS_DATUM) | !is.na(data$MRT_DATUM) | !is.na(data$mediz_an.time_stamp) |
+                                                      !is.na(data$TMT_DATUM) | !is.na(data$CERAD_DATUM))))
+data <- distinct(.data = data, SIC, fu, .keep_all = T)
+
+
+qdec <- read.delim("/data/pt_life/ResearchProjects/LLammer/Analysis/Preprocessing/all_subs_aseg_stats.txt", sep = "")
+qdec$mrt_pseudonym <- substr(qdec$Measure.volume, 1, 10)
+qdec$fu <- ifelse("_fu" != substr(qdec$Measure.volume, 11, 13), 0, 1)
+pseudo <- read_excel("/data/pt_life/ResearchProjects/LLammer/Data/PV573_PV-MRT-Pseudonymliste.xlsx")
+qdec <- merge(qdec, pseudo, by = "mrt_pseudonym", all.x = T)
+mean_TIV <- mean(qdec$EstimatedTotalIntraCranialVol)
+qdec$HCV_mean <- (qdec$Right.Hippocampus + qdec$Left.Hippocampus)/2
+res <- lmer(HCV_mean ~ EstimatedTotalIntraCranialVol + (1|mrt_pseudonym), data = qdec)
+sres <- summary(res)
+beta <- sres$coefficients[2]
+qdec$HCV <- qdec$HCV_mean - beta * (qdec$EstimatedTotalIntraCranialVol - mean_TIV)
+colnames(qdec)[67] <- "SIC"
+data <- merge(data, qdec, by = c("SIC", "fu"), all.x = T)
+data$fu <- ifelse(data$fu == 0, "BL", "FU")
+data$pandemic <- ifelse(as.Date(data$LSNS_DATUM) >= as.Date("2020-03-22"), 1, 0)
+data %>%
+  select(fu, sex, age_base, age_change, LSNS_base, LSNS_change, HCV, BMI, hypertension, diabetes, education, CESD, HCV, memo, procspeed, exfunct, TICS, pandemic) %>%
+  rename(
+    "baseline age (years)" = age_base,
+    "change in age (years)" = age_change,
+    "baseline LSNS" = LSNS_base,
+    "change in LSNS" = LSNS_change,
+    "memory (SD)" = memo,
+    "processing speed (SD)" = procspeed,
+    "executive functions (SD)" = exfunct,
+    "gender (female)" = sex,
+    "HCV (mm³)" = HCV,
+    "BMI (kg/m²)" = BMI
+  ) %>%
+tbl_summary(by = fu,
+            statistic = c(`baseline age (years)`, `change in age (years)`, `BMI (kg/m²)`, CESD, `baseline LSNS`, `change in LSNS`, `HCV (mm³)`, `memory (SD)`, `processing speed (SD)`, `executive functions (SD)`, TICS) ~ "{mean} ({sd}) | {min} | {max} | {N_miss}",
+            type = list(CESD ~ 'continuous'), missing = "no", value = list(`gender (female)` ~ "0")) %>%
+  modify_header(label ~ "Variable      ") %>%
+  modify_footnote(update = all_stat_cols() ~ "categorical: n (%) yes; continuous: Mean (SD) | minimum | maximum | n missing\n\nHCV = right-left average hippocampal volume; BMI, body-mass-index; LSNS, Lubben Social Network Scale; TICS, Trierer Inventar zum chroischen Stress; CESD, Center for Epidemiological Studies Depression Scale; SD, standard deviation; education: 1 = no tertiary education") 
+
+```
+
+
+Descriptive Statistics for other variables
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(gtsummary)
+library(tidyverse)
+
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Results_si_links/data_si_links.csv")
+# remove subjects that did not actually participate in follow-up
+data <- subset(data, data$fu == 0 | (data$fu == 1 &(!is.na(data$LSNS_DATUM) | !is.na(data$MRT_DATUM) | !is.na(data$mediz_an.time_stamp) |
+                                                      !is.na(data$TMT_DATUM) | !is.na(data$CERAD_DATUM))))
+data <- distinct(.data = data, SIC, fu, .keep_all = T)
+
+data$fu <- ifelse(data$fu == 0, "BL", "FU")
+data %>%
+  select(fu, married, non_working, live_alone, n_dwell, SES, migrat, psqi_glob, IPAQ_total_met) %>%
+  rename(
+    "not working" = non_working,
+    "living alone" = live_alone,
+    "n in dwelling" = n_dwell,
+    "migration background" = migrat,
+    "global PSQI" = psqi_glob,
+    "total weekly METs" = IPAQ_total_met
+  ) %>%
+  tbl_summary(by = fu,
+            statistic = list(c(`n in dwelling`,`SES`, `global PSQI`, `total weekly METs`) ~ "{mean} ({sd}) | {min} | {max} | {N_miss}",
+            c(`not working`,`living alone`,`married`,`migration background`) ~ "{n} ({p}%) | {N_miss}"),
+            type = list(`n in dwelling` ~ 'continuous'), missing = "no") %>%
+  modify_header(label ~ "Variable      ") %>%
+  modify_footnote(update = all_stat_cols() ~ "categorical: n (%) yes | n missing; continuous: Mean (SD) | minimum | maximum | n missing\n\nnot working, not gainfully employed due to other reasons than military or alternative service; n in dwelling = number of persons living in the participant's dwelling; SES, socioeconomic status as a metric variable ranging from 3 to 21; global PSQI, global Pittsburgh Sleep Quality Index score; total weekly METs, toal weekly metabolic equivalents based on the International Physical Activity Questionnaire") 
+```
+
+Results of LSNS links
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_si_links/coefficients/")
+df <- read.csv("overview_full.csv")
+df[3:7] <- round(df[,3:7], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  )) 
+ 
+flextable(df, col_keys = c("dv", "predictor", "estimate", "CI95", "p.value_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", CI95 = "95% CI", n_total = "n total", n_individual = "n indiv") %>% 
+  width(j = c(2,4,5), width = c(1,1.3,1.1)) %>%
+  add_header_row(values = "Regression coefficients and measures of significance", colwidths = 7) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, ** p<0.01, *** p<0.001, **** p<0.0001")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; n total, total number of observations; n indiv, number of participants; LSNS_sum, Lubben Social Network Scale sum score; SES, socioeconomic status; not working, not gainfully employed due to other reasons than military or alternative service; n dwell, number of persons living in the participants' dwelling; migrat, migration background; live alone, participants living alone; TICS, sum score of the Trierer Inventar zum chronischen Stress (chronic stress questionnaire); age_base, age at baseline; age_change, change in age from baseline to follow-up" ))
+
+```
+
+Comparison of LIFE-SES data with RKI health monitoring
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Results_si_links/data_si_links.csv")
+# remove subjects that did not actually participate in follow-up
+data <- subset(data, data$fu == 0 | (data$fu == 1 &(!is.na(data$LSNS_DATUM) | !is.na(data$MRT_DATUM) | !is.na(data$mediz_an.time_stamp) |
+                                                      !is.na(data$TMT_DATUM) | !is.na(data$CERAD_DATUM))))
+data <- distinct(.data = data, SIC, fu, .keep_all = T)
+df <- data.frame(matrix(ncol = 3, nrow = 5))
+colnames(df) <- c("category", "quintile", "LIFE-Adult (%)")
+df$category <- c("low", rep("middle", 3), "high")
+df$quintile <- 1:5
+df[1, "LIFE-Adult (%)"] <- (length(which(data$SES < 7.8))/length(which(!is.na(data$SES))))*100
+df[2, "LIFE-Adult (%)"] <- (length(which(data$SES < 9.7 & data$SES >= 7.8))/length(which(!is.na(data$SES))))*100
+df[3, "LIFE-Adult (%)"] <- (length(which(data$SES < 11.8 & data$SES >= 9.7))/length(which(!is.na(data$SES))))*100
+df[4, "LIFE-Adult (%)"] <- (length(which(data$SES < 14.2 & data$SES >= 11.8))/length(which(!is.na(data$SES))))*100
+df[5, "LIFE-Adult (%)"] <- (length(which(data$SES >= 14.2))/length(which(!is.na(data$SES))))*100
+df$`LIFE-Adult (%)` <- round(df$`LIFE-Adult (%)`, digits = 2)
+
+flextable(df) %>%
+  merge_at(i=2:4,j=1) %>% 
+  width(j = 3, width = 1.3)%>%
+  add_footer_lines(values = c("category, socioeconomic status category; LIFE-Adult (%), percentage of participants falling into the range of the quintile cut-off points based on a representative German sample" ))
+
+```
+
+Results of BLCS models
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_blcs/")
+overview <- read.csv("overview_fiml.csv")
+overview$dv <- as.character(overview$dv)
+overview$predictor <- as.character(overview$predictor)
+overview <- overview %>%
+  mutate(dv = case_when(
+    dv == "dHCV1" ~ paste0("\U0394", "HCV"),
+    dv == "dLSNS1" ~ paste0("\U0394", "LSNS"),
+    dv == "dexfunct1" ~ paste0("\U0394", "EF"),
+    dv == "dmemo1" ~ paste0("\U0394", "Memo"),
+    dv == "dprocspeed1" ~ paste0("\U0394", "PS"),
+    TRUE ~ dv
+  ), predictor = case_when(
+    predictor == "LSNS_sum.0" ~ "LSNS_base",
+    predictor == "HCV.0" ~ "HCV_base",
+    predictor == "exfunct.0" ~ "EF_base",
+    predictor == "memo.0" ~ "Memo_base",
+    predictor == "procspeed.0" ~ "PS_base",
+    TRUE ~ predictor
+  )) 
+
+overview[,c("estimate", "se", "p.value", "sided_p.value", "q_value")] <- round(overview[,c("estimate", "se", "p.value", "sided_p.value", "q_value")],digits = 3)
+overview <- overview %>%
+  mutate(p = case_when(
+    sided_p.value < 0.05 ~ paste0(sided_p.value, "*"),
+    TRUE ~ as.character(sided_p.value)
+  ))
+overview <- overview[,c("dv", "predictor", "estimate", "se", "p", "q_value", "n")]
+flextable(overview) %>%
+  theme_vanilla() %>%
+  set_header_labels(p = "p-value", q_value = "q-value") %>%
+  add_footer_lines(values = c("dv, dependent variable; se, standard error; n, number of participants; _base, baseline score of; \U0394, change in; LSNS, Lubben Social Network Score; HCV, hippocampal volume; EF, executive functions; Memo, memory performance; PS, processing speed")) %>%
+  add_header_row(values = "Relevant Regressions of Bivariate Latent Change Score Models", colwidths = 7) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_row(values = c("* p<0.05"), colwidths = 7) 
+
+```
+
+Results of mediation analyses
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/")
+df <- read.csv("summary.csv")
+df[,5:7] <- round(df[,5:7], digits = 4)
+df$estimate <- round(df$estimate, digits = 4)
+df$dv <- c(rep("Hippo-\ncampal Volume", 2), rep("Executive Functions", 2), rep("Memory", 2), 
+           rep("Processing Speed", 2))
+df$mediator <- c(rep("TICS", 2), rep("Hippo-\ncampal Volume", 6))
+df <- df[,c(2,1,3:7)]
+flextable(df) %>%
+  theme_vanilla() %>%
+  set_header_labels(mediator = "Mediator", model = "Model", estimate = "Estimate", standard.error = "SE", z.value = "z-value", p_value = "p-value") %>%
+  merge_at(i=1:2,j=2) %>% 
+  merge_at(i=3:4,j=2) %>% 
+  merge_at(i=5:6,j=2) %>% 
+  merge_at(i=7:8,j=2) %>% 
+  merge_at(i=1:2,j=1) %>% 
+  merge_at(i=3:8,j=1) %>%
+  add_header_row(values = "Indirect effects of social isolation on hippocampal volume and cognitive functions", colwidths =7) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; SE, standard error; TICS, Trierer Inventar zum chronischen Stress (stress questionnaire)", "model1: corrected for baseline age, change in age and gender", "model2: model1 + hypertension+diabetes+education+BMI+CESD"))
+```
+
+Results of psqi mediation analyses
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/")
+df <- read.csv("summary_psqi.csv")
+df[,5:7] <- round(df[,5:7], digits = 4)
+df$estimate <- round(df$estimate, digits = 4)
+df$dv <- c(rep("Hippo-\ncampal Volume", 2), rep("Executive Functions", 2), rep("Memory", 2), 
+           rep("Processing Speed", 2))
+df$mediator <- "PSQI"
+df <- df[,c(2,1,3:7)]
+flextable(df) %>%
+  theme_vanilla() %>%
+  set_header_labels(mediator = "Mediator", model = "Model", estimate = "Estimate", standard.error = "SE", z.value = "z-value", p_value = "p-value") %>%
+  merge_at(i=1:2,j=2) %>% 
+  merge_at(i=3:4,j=2) %>% 
+  merge_at(i=5:6,j=2) %>% 
+  merge_at(i=7:8,j=2) %>% 
+  merge_at(i=1:8,j=1) %>% 
+  add_header_row(values = "Indirect effects of social isolation on hippocampal volume and cognitive functions", colwidths =7) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; SE, standard error; PSQI, global Pittsburgh Sleep Quality Index score", "model1: corrected for baseline age, change in age and gender", "model2: model1 + hypertension+diabetes+education+BMI+CESD"))
+```
+
+Fit indices for mediation analyses
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Computer Modern", font.size = 9)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/fit_indices/")
+df <- read.csv("overview_fiml.csv")
+colnames(df) <- c("fit index", "311", "ok_311", "312", "ok_312", "411a", "ok_411a", "412a", "ok_412a", "411b", "ok_411b", "412b", "ok_412b", "411c", "ok_411c", "412c", "ok_412c")
+df[3,1] <- "p-value"
+df[,c(2,4,6,8,10,12,14,16)] <- round(df[,c(2,4,6,8,10,12,14,16)], digits = 3)
+df1 <- df[,c(1,2,3,6,7,10,11,14,15)]
+df2 <- df[,c(1,4,5,8,9,12,13,16,17)]
+flextable(df1) %>%
+  theme_vanilla() %>%
+  set_header_labels(ok_311 = "ok?", ok_411a = "ok?", ok_411b = "ok?", ok_411c = "ok?") %>%
+  add_header_row(values = "Fit indices of mediation analyses of model 1", colwidths = 9) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("chisq, chi squared; df, degrees of freedom", "311: Indirect effect of social isolation on hippocampal volume via chronic stress", "411a: Indirect effect of social isolation on executive functions via hippocampal volume", "411b: Indirect effect of social isolation on memory via hippocampal volume", "411c: Indirect effect of social isolation on processing speed via hippocampal volume" )) 
+  
+  
+  
+flextable(df2) %>%
+  theme_vanilla() %>%
+  set_header_labels(ok_312 = "ok?", ok_412a = "ok?", ok_412b = "ok?", ok_412c = "ok?") %>%
+  add_header_row(values = "Fit indices of mediation analyses of model 2", colwidths = 9) %>%
+  fontsize(i = 1, size = 11, part = "header") %>%
+  add_footer_lines(values = c("chisq, chi squared; df, degrees of freedom", "312: Indirect effect of social isolation on hippocampal volume via chronic stress", "412a: Indirect effect of social isolation on executive functions via hippocampal volume", "412b: Indirect effect of social isolation on memory via hippocampal volume", "412c: Indirect effect of social isolation on processing speed via hippocampal volume" )) 
+  
+```
+
+Results of whole brain analyses
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_whole_brain/")
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+df <- read.csv("cluster_overview.csv")
+df$Max <- 10^-df$Max # convert p-values from FreeSurfer format (-log10(p)) to standard format
+df$Max <- format(df$Max, scientific = T, digits = 2)
+df$hemi <- ifelse(grepl("rh", df$model), "rh", "lh")
+df$poi <- ifelse(grepl("121", df$model), "LSNS_base", "LSNS_change")
+df$model <- substr(df$model, 15, 15)
+df <- df[,c(13,12,11,3,5,9)] # sort rows and sort and select relevant columns
+flextable(df) %>%
+  theme_vanilla() %>%
+  set_header_labels(hemi = "hemisphere", Max = "maximum p-value", Size.mm.2. = "size in mm²", Annot = "cortical region") %>%
+  add_header_row(values = "FDR-corrected clusters of lower cortical thickness significantly associated with social isolation", colwidths = 6) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("poi, predictor of interest; MNIX/Y/Z, MNI305 x/y/z coordinates of the maximumn; NVtxs, Number of vertices constituting the cluster; LSNS_base, baseline social isolation; LSNS_change, change in social isolation; rh, right hemisphere; lh, left hemisphere", "full model 1: cortical thickness ~ LSNS_base + LSNS_change + age_base + age_change + sex", "full model 2: model 1 + hypertension + diabetes + education + depression + BMI"))
+```
+
+Results table for main text
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results/coefficients/")
+df <- read.csv("overview_full.csv")
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[1:15,4:8] <- round(df[1:15,4:8], digits = 1)
+df[16:60,4:8] <- round(df[16:60,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+df_hcv <- subset(df, df$dv == "Hippo-\ncampal Volume")
+df_cog <- subset(df, df$dv != "Hippo-\ncampal Volume")
+df_hcv <- df_hcv[c(1:4,6:9),]
+df_cog <- df_cog[c(1:4,6:9,16:19,21:24,31:34,36:39),]
+flextable(df_hcv, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF") %>%
+  merge_at(i=1:8,j=1) %>% 
+  merge_at(i=1:4,j=2) %>% 
+  merge_at(i=5:8,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance", colwidths = 8) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_row(values = c("* p<0.05, BF>3", "** p<0.01, BF>10", "*** p<0.001, BF>30", "**** p<0.0001, BF>100"),
+                 colwidths = c(2,2,2,2)) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, q-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes is mm³/point on the LSNS") %>%
+  add_footer_lines("Social isolation significantly predicts hippocampal volume after multiplicity control. Bayes Factors provide strong evidence in favour of the alternative hypotheses for baseline social isolation and anecdotal to moderate evidence for change in social isolation. The effect size of one point on the  LSNS is equivalent to a baseline age difference of around two and a half months.") 
+
+flextable(df_cog, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF") %>%
+  merge_at(i=1:8,j=1) %>%
+  merge_at(i=9:16,j=1) %>%
+  merge_at(i=17:24,j=1) %>%
+  merge_at(i=1:4,j=2) %>% 
+  merge_at(i=5:8,j=2) %>%
+  merge_at(i=9:12,j=2) %>% 
+  merge_at(i=13:16,j=2) %>%
+  merge_at(i=17:20,j=2) %>% 
+  merge_at(i=21:24,j=2) %>%
+  width(j = c(2,5), width = c(0.4,1.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance", colwidths = 8) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_row(values = c("* p<0.05, BF>3", "** p<0.01, BF>10", "*** p<0.001, BF>30", "**** p<0.0001, BF>100"),
+                 colwidths = c(2,2,2,2)) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, q-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes is standard deviation/point on the LSNS") %>%
+  add_footer_lines("Baseline social isolation significantly predicts cognitive functions after FDR-correction and BFs provide very strong to decisive evidence in favour of the alternative hypotheses. Only for model 2 of memory evidence is weak. No association of change in social isolation with executive functions is detected and evidence for associations with memory and processing speed are limited.") 
+```
+
+Results of core variables
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models without interaction terms", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+df <- read.csv("overview_full_lsns_base_age_change.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 17), rep("Executive Functions", 17), rep("Memory", 17), 
+           rep("Processing Speed", 17))
+df[,4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:17,j=1) %>%
+  merge_at(i=18:34,j=1) %>%
+  merge_at(i=35:51,j=1) %>%
+  merge_at(i=52:68,j=1) %>%
+  merge_at(i=1:6,j=2) %>% 
+  merge_at(i=7:17,j=2) %>% 
+  merge_at(i=18:23,j=2) %>% 
+  merge_at(i=24:34,j=2) %>% 
+  merge_at(i=35:40,j=2) %>% 
+  merge_at(i=41:51,j=2) %>%
+  merge_at(i=52:57,j=2) %>% 
+  merge_at(i=58:68,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction term of baseline social isolation with change in age", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" ))
+
+df <- read.csv("overview_full_lsns_base_lsns_change.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- "Hippo-\ncampal Volume"
+df[,4:8] <- round(df[,4:8], digits = 2)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:17,j=1) %>%
+  merge_at(i=1:6,j=2) %>% 
+  merge_at(i=7:17,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.3)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction term of baseline social isolation with change in social isolation", colwidths = 9) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) 
+```
+
+Results_wave_stand
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_wave_stand/coefficients/")
+df <- read.csv("overview_full.csv")
+df <- df[16:60,]
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Executive Functions", 15), rep("Memory", 15), rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models without interaction terms", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+```
+
+Results of models using LSNS as a dichotomous variable
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_cut_off/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models without interaction terms coding social isolation dichotomously", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+df <- read.csv("overview_full_lsns_base_age_change.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 17), rep("Executive Functions", 17), rep("Memory", 17), 
+           rep("Processing Speed", 17))
+df[,4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:17,j=1) %>%
+  merge_at(i=18:34,j=1) %>%
+  merge_at(i=35:51,j=1) %>%
+  merge_at(i=52:68,j=1) %>%
+  merge_at(i=1:6,j=2) %>% 
+  merge_at(i=7:17,j=2) %>% 
+  merge_at(i=18:23,j=2) %>% 
+  merge_at(i=24:34,j=2) %>% 
+  merge_at(i=35:40,j=2) %>% 
+  merge_at(i=41:51,j=2) %>%
+  merge_at(i=52:57,j=2) %>% 
+  merge_at(i=58:68,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction term of baseline social isolation with change in age coding social isolation dichotomously", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" ))
+
+df <- read.csv("overview_full_lsns_base_lsns_change.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- "Hippo-\ncampal Volume"
+df[,4:8] <- round(df[,4:8], digits = 2)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:17,j=1) %>%
+  merge_at(i=1:6,j=2) %>% 
+  merge_at(i=7:17,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.3)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction term of baseline social isolation with change in social isolation coding social isolation dichotomously", colwidths = 9) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) 
+```
+
+Results of interactions of dichotomous and continuous social isolation variables
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_cut_off_interact/coefficients/")
+df <- read.csv("overview_base.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 19), rep("Executive Functions", 19), rep("Memory", 19), 
+           rep("Processing Speed", 19))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:19,j=1) %>%
+  merge_at(i=20:38,j=1) %>%
+  merge_at(i=39:57,j=1) %>%
+  merge_at(i=58:76,j=1) %>%
+  merge_at(i=1:7,j=2) %>% 
+  merge_at(i=8:19,j=2) %>% 
+  merge_at(i=20:26,j=2) %>% 
+  merge_at(i=27:38,j=2) %>% 
+  merge_at(i=39:45,j=2) %>% 
+  merge_at(i=46:57,j=2) %>%
+  merge_at(i=58:64,j=2) %>% 
+  merge_at(i=65:76,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction of baseline social isolation with dichotomously coded social isolation", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+df <- read.csv("overview_change.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 19), rep("Executive Functions", 19), rep("Memory", 19), 
+           rep("Processing Speed", 19))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:19,j=1) %>%
+  merge_at(i=20:38,j=1) %>%
+  merge_at(i=39:57,j=1) %>%
+  merge_at(i=58:76,j=1) %>%
+  merge_at(i=1:7,j=2) %>% 
+  merge_at(i=8:19,j=2) %>% 
+  merge_at(i=20:26,j=2) %>% 
+  merge_at(i=27:38,j=2) %>% 
+  merge_at(i=39:45,j=2) %>% 
+  merge_at(i=46:57,j=2) %>%
+  merge_at(i=58:64,j=2) %>% 
+  merge_at(i=65:76,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models with interaction of change in social isolation with dichotomously coded social isolation", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+```
+
+
+Results for models including additional control variables
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_psqi/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 11), rep("Executive Functions", 11), rep("Memory", 11), 
+           rep("Processing Speed", 11))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:11,j=1) %>%
+  merge_at(i=12:22,j=1) %>%
+  merge_at(i=23:33,j=1) %>%
+  merge_at(i=34:44,j=1) %>%
+  width(j = c(2,5), width = c(0.4,2.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models controlling for sleep quality", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; psqi, global Pittsburgh Sleep Quality Index score; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_ipaq/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 11), rep("Executive Functions", 11), rep("Memory", 11), 
+           rep("Processing Speed", 11))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:11,j=1) %>%
+  merge_at(i=12:22,j=1) %>%
+  merge_at(i=23:33,j=1) %>%
+  merge_at(i=34:44,j=1) %>%
+  width(j = c(2,5), width = c(0.4,2.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models controlling for physical activity", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; ipaq; total METs/week based on the International Physical Activity Questionnaire; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_pand/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 17), rep("Executive Functions", 17), rep("Memory", 17), 
+           rep("Processing Speed", 17))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:17,j=1) %>%
+  merge_at(i=18:34,j=1) %>%
+  merge_at(i=35:51,j=1) %>%
+  merge_at(i=52:68,j=1) %>%
+  merge_at(i=1:6,j=2) %>% 
+  merge_at(i=7:17,j=2) %>% 
+  merge_at(i=18:23,j=2) %>% 
+  merge_at(i=24:34,j=2) %>% 
+  merge_at(i=35:40,j=2) %>% 
+  merge_at(i=41:51,j=2) %>%
+  merge_at(i=52:57,j=2) %>% 
+  merge_at(i=58:68,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,2.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models controlling for Covid-pandemic", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; pandemic, LSNS measurement taking place after initiation of lockdown measures in Germany; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+```
+
+Results of models regressing dvs on PSQI/IPAQ only controlling for age and gender
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_psqi_ipaq_only/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 8), rep("Executive Functions", 8), rep("Memory", 8), 
+           rep("Processing Speed", 8))
+df[3:7] <- round(df[,3:7], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ))
+flextable(df, col_keys = c("dv", "predictor", "estimate", "CI95", "p.value_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:4,j=1) %>%
+  merge_at(i=5:8,j=1) %>%
+  merge_at(i=9:12,j=1) %>%
+  merge_at(i=13:16,j=1) %>%
+  merge_at(i=17:20,j=1) %>%
+  merge_at(i=21:24,j=1) %>%
+  merge_at(i=25:28,j=1) %>%
+  merge_at(i=29:32,j=1) %>%
+  width(j = c(2,4), width = c(0.4,2.2)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models for sleep quality and physical activity", colwidths = 7) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05; ** p<0.01; *** p<0.001; **** p<0.0001")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; total n, total number of observations; n individuals, number of participants; psqi, global Pittsburgh Sleep Quality Index score; LSNS_base, ipaq, total weekly metabolic equivalents according to International Physical Activity Questionnaire", "full model: dv~ipaq or psqi +age_base+age_change+gender")) 
+```
+
+Results of models using different cut-offs for variable construction 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mmst27/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models using an MMST score of 27 as cut-off for inclusion", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_bp140/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models using a systolic blood pressure of 140 as a cut-off for hypertension", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+```
+
+Results of models using different sets of included participants 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times New Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_less_excl/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models using fewer exclusion criteria", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/Results_change_check/coefficients/")
+df <- read.csv("overview_full.csv")
+df$predictor <- ifelse(df$predictor == "sex", "gender", as.character(df$predictor))
+df$dv <- c(rep("Hippo-\ncampal Volume", 15), rep("Executive Functions", 15), rep("Memory", 15), 
+           rep("Processing Speed", 15))
+df[4:8] <- round(df[,4:8], digits = 3)
+df$CI95 <- paste0(as.character(df$X2.5.), ", ", as.character(df$X97.5.))
+df$p.value <- ifelse(df$p.value < 0.0001, format(df$p.value, scientific = T, digits = 2), 
+                     round(df$p.value, digits = 4))
+df$FDR.corrected <- ifelse(df$FDR.corrected < 0.0001, format(df$FDR.corrected, scientific = T, digits = 2), 
+                           round(df$FDR.corrected, digits = 4))
+df$BF <- ifelse(df$BF >= 1000, format(df$BF, scientific = T, digits = 2), round(df$BF, digits = 2))
+df <- df %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ), FDR_ast = case_when(
+    FDR.corrected < 0.05 & FDR.corrected >= 0.01 ~ paste0(FDR.corrected, "*"),
+    FDR.corrected < 0.01 & FDR.corrected >= 0.001 ~ paste0(FDR.corrected, "**"),
+    FDR.corrected < 0.001 & FDR.corrected >= 0.0001 ~ paste0(FDR.corrected, "***"),
+    grepl("e", FDR.corrected) ~ paste0(FDR.corrected, "****"),
+    TRUE ~ as.character(FDR.corrected) 
+  ), BF_ast = case_when(
+    as.numeric(BF) <= 10 & as.numeric(BF) > 3 ~ paste0(BF, "*"),
+    as.numeric(BF) <= 30 & as.numeric(BF) > 10 ~ paste0(BF, "**"),
+    as.numeric(BF) <= 100 & as.numeric(BF) > 30 ~ paste0(BF, "***"),
+    grepl("e", BF) | as.numeric(BF) > 100 ~ paste0(BF, "****"),
+    TRUE ~ as.character(BF) 
+  ))
+flextable(df, col_keys = c("dv", "model", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "BF_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", BF_ast = "BF", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:15,j=1) %>%
+  merge_at(i=16:30,j=1) %>%
+  merge_at(i=31:45,j=1) %>%
+  merge_at(i=46:60,j=1) %>%
+  merge_at(i=1:5,j=2) %>% 
+  merge_at(i=6:15,j=2) %>% 
+  merge_at(i=16:20,j=2) %>% 
+  merge_at(i=21:30,j=2) %>% 
+  merge_at(i=31:35,j=2) %>% 
+  merge_at(i=36:45,j=2) %>%
+  merge_at(i=46:50,j=2) %>% 
+  merge_at(i=51:60,j=2) %>% 
+  width(j = c(2,5), width = c(0.4,1.5)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models including only participants with data for both timepoints", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05, BF>3; ** p<0.01, BF>10; *** p<0.001, BF>30; **** p<0.0001, BF>100")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; BF, Bayes Factor in favour of alternative hypothesis; total n, total number of observations; n individuals, number of participants; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change+gender", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively")
+```
+
+Results of models calculated separately by gender 
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(flextable)
+library(tidyverse)
+set_flextable_defaults(font.family = "Times new Roman", font.size = 12)
+setwd("/data/pt_life/ResearchProjects/LLammer/si_update/")
+dfm <- read.csv("Results_male/coefficients/overview_full.csv")
+dfmi <- read.csv("Results_male/coefficients/overview_full_lsns_base_age_change.csv")
+dfmsi <- read.csv("Results_male/coefficients/overview_full_lsns_base_lsns_change.csv")
+dff <- read.csv("Results_female/coefficients/overview_full.csv")
+dffi <- read.csv("Results_female/coefficients/overview_full_lsns_base_age_change.csv")
+dffsi <- read.csv("Results_female/coefficients/overview_full_lsns_base_lsns_change.csv")
+
+# create dataframe and name columns
+overview <- data.frame(matrix(ncol = 12, nrow = 52))
+colnames(overview) <- c("dv", "model", "gender", "predictor", "estimate", "standard error",
+                        "t-value", "2.5%", "97.5%", "p-value", 
+                        "n_total", "n_individual")
+overview$dv <- c(rep("Hippo-\ncampal Volume", 16), rep("Executive Functions", 12), rep("Memory", 12), 
+                 rep("Processing Speed", 12))
+overview$model <- c(rep(1,8), rep(2,8), rep(1,6), rep(2,6), rep(1,6), rep(2,6), rep(1,6), rep(2,6))
+overview$gender[1:16] <- c(rep("female",4), rep("male",4))
+overview$gender[17:52] <- c(rep("female",3), rep("male",3))
+overview$predictor[1:16] <- c("LSNS_base", "LSNS_change", "LSNS_base*age_change", "LSNS_base*LSNS_change")
+overview$predictor[17:52] <- c("LSNS_base", "LSNS_change", "LSNS_base*age_change")
+overview[c(1,2,9,10,17,18,23,24,29,30,35,36,41,42,47,48),5:12] <- dff[c(1,2,5,6,14,15,18,19,27,28,31,32,40,41,44,45),c(4:12)]
+overview[c(5,6,13,14,20,21,26,27,32,33,38,39,44,45,50,51),5:12] <- dfm[c(1,2,5,6,14,15,18,19,27,28,31,32,40,41,44,45),c(4:12)]
+overview[c(3,11,19,25,31,37,43,49),5:12] <- dffi[c(1,6,16,21,31,36,46,51),4:12]
+overview[c(7,15,22,28,34,40,46,52),5:12] <- dfmi[c(1,6,16,21,31,36,46,51),4:12]
+overview[c(4,12),5:12] <- dffsi[c(1,6),c(4:9,10,11)]
+overview[c(8,16),5:12] <- dfmsi[c(1,6),c(4:9,10,11)]
+
+overview[5:9] <- round(overview[,5:9], digits = 3)
+overview$CI95 <- paste0(as.character(overview$`2.5%`), ", ", as.character(overview$`97.5%`))
+colnames(overview)[10] <- "p.value"
+overview$p.value <- ifelse(overview$p.value < 0.0001, format(overview$p.value, scientific = T, digits = 2), round(overview$p.value, digits = 4))
+overview <- overview %>%
+  mutate(p.value_ast = case_when(
+    p.value < 0.05 & p.value >= 0.01 ~ paste0(p.value, "*"),
+    p.value < 0.01 & p.value >= 0.001 ~ paste0(p.value, "**"),
+    p.value < 0.001 & p.value >= 0.0001 ~ paste0(p.value, "***"),
+    grepl("e", p.value) ~ paste0(p.value, "****"),
+    TRUE ~ as.character(p.value) 
+  ))
+
+flextable(overview, col_keys = c("dv", "model", "gender", "predictor", "estimate", "CI95", "p.value_ast", "FDR_ast", "n_total", "n_individual")) %>%
+  theme_vanilla() %>%
+  set_header_labels(model = "Model", gender = "gender", predictor = "Predictor", estimate = "Estimate", p.value_ast = "p-value", FDR_ast = "FDR", CI95 = "95% CI", n_total = "total n", n_individual = "n individuals") %>%
+  merge_at(i=1:16,j=1) %>%
+  merge_at(i=17:28,j=1) %>%
+  merge_at(i=29:40,j=1) %>%
+  merge_at(i=41:52,j=1) %>%
+  merge_at(i=1:4,j=2) %>% 
+  merge_at(i=5:8,j=2) %>% 
+  merge_at(i=9:12,j=2) %>% 
+  merge_at(i=13:16,j=2) %>% 
+  merge_at(i=17:19,j=2) %>% 
+  merge_at(i=20:22,j=2) %>%
+  merge_at(i=23:25,j=2) %>% 
+  merge_at(i=26:28,j=2) %>%
+  merge_at(i=29:31,j=2) %>% 
+  merge_at(i=32:34,j=2) %>%
+  merge_at(i=35:37,j=2) %>% 
+  merge_at(i=38:40,j=2) %>%
+  merge_at(i=41:43,j=2) %>% 
+  merge_at(i=44:46,j=2) %>%
+  merge_at(i=47:49,j=2) %>% 
+  merge_at(i=50:52,j=2) %>%
+  merge_at(i=1:4,j=3) %>% 
+  merge_at(i=5:8,j=3) %>% 
+  merge_at(i=9:12,j=3) %>% 
+  merge_at(i=13:16,j=3) %>% 
+  merge_at(i=17:19,j=3) %>% 
+  merge_at(i=20:22,j=3) %>%
+  merge_at(i=23:25,j=3) %>% 
+  merge_at(i=26:28,j=3) %>%
+  merge_at(i=29:31,j=3) %>% 
+  merge_at(i=32:34,j=3) %>%
+  merge_at(i=35:37,j=3) %>% 
+  merge_at(i=38:40,j=3) %>%
+  merge_at(i=41:43,j=3) %>% 
+  merge_at(i=44:46,j=3) %>%
+  merge_at(i=47:49,j=3) %>% 
+  merge_at(i=50:52,j=3) %>%
+  width(j = c(2,6), width = c(0.4,1.3)) %>%
+  add_header_row(values = "Adjusted regression coefficients and measures of significance of models stratified by gender", colwidths = 10) %>%
+  fontsize(i = 1, j = NULL, size = 11, part = "header") %>%
+  add_footer_lines(values = c("* p<0.05; ** p<0.01; *** p<0.001; **** p<0.0001")) %>%
+  add_footer_lines(values = c("dv, dependent variable; CI, confidence interval; FDR, p-values after FDR-correction; LSNS_base, baseline Lubben Social Network Score; LSNS_change, change in Lubben Social Network Score; CESD, Center for Epidemiological Studies-Depression", "full model1: dv~LSNS_base+LSNS_change+age_base+age_change", "full model2: model1 + hypertension+diabetes+education+BMI+CESD" )) %>%
+  add_footer_lines("The unit of effect sizes on hippocampal volume and cognitive functions for non-interaction models are mm³/point on the LSNS and standard deviation/point on the LSNS, respectively. For interaction models the unit in the denominator is multiplied by year or point on the LSNS.") 
+```
