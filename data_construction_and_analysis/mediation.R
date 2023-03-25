@@ -3,7 +3,7 @@ library("tidyverse")
 library("car")
 
 ### load and prepare dataset 
-df <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data.csv")
+df <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
 df <- reshape(df, idvar = "subject", timevar = "fu", direction = "wide")
 df <- df %>%
   rename(
@@ -29,7 +29,9 @@ df <- df %>%
   ) %>%
   mutate(LSNS_fu = LSNS_base.0 + LSNS_change.1)
 
-fastsem <- function(med = "HCV", dv, model = 1){
+df$HCV_bl <- scale(df$HCV_bl)
+df$HCV_fu <- scale(df$HCV_fu)
+fastfimlsem <- function(med = "HCV", dv, model = 1){
   # a function to estimate indirect effects of social isolation via the mediator on the dependent variable
   # returns information on correlation of predictors of individual regressions, fit indices and estimations of effects
   # legal values for med are "HCV", and "TICS"
@@ -40,74 +42,74 @@ fastsem <- function(med = "HCV", dv, model = 1){
                                    age_base + age_change + sex"), data=df)
       test2 <- lm(formula = "HCV_fu ~ LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex", data=df)
       formulae <- paste(paste0(dv, "_fu ~ LSNS_base + LSNS_fu + b*HCV_bl + HCV_fu +  ", dv, "_bl + age_base + age_change + sex"), 
-                         "HCV_fu ~ a*LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex", 
-                         "indirect := a*b", sep = "\n")
+                        "HCV_fu ~ a*LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex", 
+                        "indirect := a*b", sep = "\n")
     }
     else{
       test1 <- lm(formula = paste0(dv, "_fu ~ LSNS_base + LSNS_fu + HCV_bl + TICS_bl + TICS_fu +  
                                    age_base + age_change + sex"), data=df)
       test2 <- lm(formula = "TICS_fu ~ LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex", data=df)
       formulae <- paste(paste0(dv, "_fu ~ LSNS_base + LSNS_fu + HCV_bl + b*TICS_bl + TICS_fu + age_base + age_change + sex"), 
-                         "TICS_fu ~ a*LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex", 
-                         "indirect := a*b", sep = "\n")
+                        "TICS_fu ~ a*LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex", 
+                        "indirect := a*b", sep = "\n")
     }
-  }
-  else{
+  } else{
     if(med == "HCV"){
       test1 <- lm(formula = paste0(dv, "_fu ~ LSNS_base + LSNS_fu + HCV_bl + HCV_fu +  ", dv, "_bl + age_base + age_change + 
                                    sex + hypertension + diabetes + BMI + education + CES.D"), data=df)
       test2 <- lm(formula = "HCV_fu ~ LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex + hypertension + diabetes + 
                   BMI + education + CES.D", data=df)
       formulae <- paste(paste0(dv, "_fu ~ LSNS_base + LSNS_fu + b*HCV_bl + HCV_fu +  ", dv, "_bl + age_base + age_change + sex + hypertension + diabetes + BMI + education + CES.D"), 
-                         "HCV_fu ~ a*LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex + hypertension + diabetes + BMI + education + CES.D", 
-                         "indirect := a*b", sep = "\n")
+                        "HCV_fu ~ a*LSNS_base + LSNS_fu + HCV_bl + age_base + age_change + sex + hypertension + diabetes + BMI + education + CES.D", 
+                        "indirect := a*b", sep = "\n")
     }
     else{
       test1 <- lm(formula = paste0(dv, "_fu ~ LSNS_base + LSNS_fu + HCV_bl + TICS_bl + TICS_fu +  
                                    age_base + age_change + sex + hypertension + diabetes + BMI + education + CES.D"), data=df)
       test2 <- lm(formula = "TICS_fu ~ LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex + CES.D", data=df)
       formulae <- paste(paste0(dv, "_fu ~ LSNS_base + LSNS_fu + HCV_bl + b*TICS_bl + TICS_fu + age_base + age_change + sex + hypertension + diabetes + BMI + education + CES.D"), 
-                         "TICS_fu ~ a*LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex + CES.D", 
-                         "indirect := a*b", sep = "\n")
+                        "TICS_fu ~ a*LSNS_base + LSNS_fu + TICS_bl + age_base + age_change + sex + CES.D", 
+                        "indirect := a*b", sep = "\n")
     }
   }
   vifres1 <- as.data.frame(vif(test1))
   vifres2 <- as.data.frame(vif(test2))
   if(max(vifres1) >= 10 | max(vifres2) >= 10){
-    write_lines(paste0("VIF-threshold exceeded in mediation with ", dv, " as dependent variable 
-                           and ", med, " as mediator in model", model), append = T, file = 
-                  "/data/pt_life/ResearchProjects/LLammer/Results/mediation/VIF/threshold_exceeded.txt")
+  write_lines(paste0("VIF-threshold exceeded in mediation with ", dv, " as dependent variable 
+                        and ", med, " as mediator in model", model), append = T, file = 
+               "/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/VIF/threshold_exceeded_fiml.txt")
   }
   stest1 <- summary(test1, corr = T)
   stest2 <- summary(test2, corr = T)
-  fit <- sem(formulae, df)
+  fit <- sem(formulae, df, estimator='ml', missing = "fiml", fixed.x = F)
   sumfit <- summary(fit, fit.measures=T, rsq=T)
-  sumfit$PE$sided_pvalue <- NA
-  sumfit$PE[nrow(sumfit$PE)-2, "sided_pvalue"] <- ifelse(sumfit$PE[nrow(sumfit$PE)-2, "est"] < 0, sumfit$PE[nrow(sumfit$PE)-2, "pvalue"]/2, 
-                                                        1 - sumfit$PE[nrow(sumfit$PE)-2, "pvalue"]/2)
-  write.csv(sumfit$PE, paste0("/data/pt_life/ResearchProjects/LLammer/Results/mediation/estimates/", dv, "_on_", med, "model", model, ".csv"))
-  write.csv(sumfit$FIT, paste0("/data/pt_life/ResearchProjects/LLammer/Results/mediation/fit_indices/", dv, "_on_", med, "model", model, ".csv"))
+  sumfit$pe$sided_pvalue <- NA
+  sumfit$pe[nrow(sumfit$pe)-2, "sided_pvalue"] <- ifelse(sumfit$pe[nrow(sumfit$pe)-2, "est"] < 0, sumfit$pe[nrow(sumfit$pe)-2, "pvalue"]/2, 
+                                                         1 - sumfit$pe[nrow(sumfit$pe)-2, "pvalue"]/2)
+  write.csv(sumfit$pe, paste0("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/estimates/", dv, "_on_", med, "model", model, "_fiml.csv"))
+  write.csv(sumfit$fit, paste0("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/fit_indices/", dv, "_on_", med, "model", model, "_fiml.csv"))
   res_list <- list(vifres1, vifres2, stest1, stest2, fit, sumfit)
   names(res_list) <- c("vifres1", "vifres2", "stest1", "stest2", "fit", "sumfit")
   return(res_list)
 }
 
-fit311 <- fastsem(med = "TICS", dv = "HCV")
-fit312 <- fastsem(med = "TICS", dv = "HCV", model = 2)
+fimlfit311 <- fastfimlsem(med = "TICS", dv = "HCV")
+fimlfit312 <- fastfimlsem(med = "TICS", dv = "HCV", model = 2)
 
-fit411a <- fastsem(dv = "exfunct")
-fit412a <- fastsem(dv = "exfunct", model = 2)
-fit411b <- fastsem(dv = "memo")
-fit412b <- fastsem(dv = "memo", model = 2)
-fit411c <- fastsem(dv = "procspeed")
-fit412c <- fastsem(dv = "procspeed", model = 2)
+fimlfit411a <- fastfimlsem(dv = "exfunct")
+fimlfit412a <- fastfimlsem(dv = "exfunct", model = 2)
+fimlfit411b <- fastfimlsem(dv = "memo")
+fimlfit412b <- fastfimlsem(dv = "memo", model = 2)
+fimlfit411c <- fastfimlsem(dv = "procspeed")
+fimlfit412c <- fastfimlsem(dv = "procspeed", model = 2)
 
-fits <- list(fit311, fit312, fit411a, fit412a, fit411b, fit412b, fit411c, fit412c)
-indirect_overview <- as.data.frame(lapply(fits, function(x) tail(x$sumfit$PE$pvalue, n =3)[1]))
-indirect_overview[2,] <- as.data.frame(lapply(fits, function(x) tail(x$sumfit$PE$sided_pvalue, n =3)[1]))
-indirect_overview[3,] <- as.data.frame(lapply(fits, function(x) tail(x$sumfit$PE$est, n =3)[1]))
-colnames(indirect_overview) <- c("311", "312", "411a", "412a", "411b", "412b", "411c", "412c")
-rownames(indirect_overview) <- c("p_value", "sided_p_value", "estimate")
-write.csv(indirect_overview, "/data/pt_life/ResearchProjects/LLammer/Results/mediation/pvals/pvals.csv")
+fimlfits <- list(fimlfit311, fimlfit312, fimlfit411a, fimlfit412a, fimlfit411b, fimlfit412b, fimlfit411c, fimlfit412c)
+fimlindirect_overview <- as.data.frame(lapply(fimlfits, function(x) tail(x$sumfit$pe$pvalue, n =3)[1]))
+fimlindirect_overview[2,] <- as.data.frame(lapply(fimlfits, function(x) tail(x$sumfit$pe$sided_pvalue, n =3)[1]))
+fimlindirect_overview[3,] <- as.data.frame(lapply(fimlfits, function(x) tail(x$sumfit$pe$est, n =3)[1]))
+colnames(fimlindirect_overview) <- c("311", "312", "411a", "412a", "411b", "412b", "411c", "412c")
+rownames(fimlindirect_overview) <- c("p_value", "sided_p_value", "estimate")
 
-save.image("/data/pt_life/ResearchProjects/LLammer/Results/mediation/Workspace/workspace.RData")
+write.csv(fimlindirect_overview, "/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/pvals/pvals_fiml.csv")
+
+save.image("/data/pt_life/ResearchProjects/LLammer/si_update/Results_mediation/Workspace/workspace_fiml.RData")
