@@ -1,25 +1,25 @@
-library("lme4") # 1.1-26
+library("lme4") # 1.1-31
 library("lmerTest") # 3.1-3
 # ensure that lmerTest doesn't mask lmer, which would cause us multiple problems
 lmer <- lme4::lmer
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/diagnostic_fcns.r")
 source("/data/gh_gr_agingandobesity_share/literature/methods/statistics/linear_models_course_rogermundry_2018/functions/glmm_stability.r")
-library("BayesFactor") #0.9.1.4.2
-library(car) #3.0-10
-library(BiocManager) # 1.30.12
-library(qvalue) # 2.18.0
-library(doMC) #1.3.7
+library("BayesFactor") #0.9.1.4.4
+library(car) #3.1-1
+library(BiocManager) # 1.30.19
+library(qvalue) # 2.30.0
+library(doMC) #1.3.8
 
 ### import longitudinal dataset, 
-data <- read.csv("/data/pt_life/ResearchProjects/LLammer/Data/compiled_scaled_data.csv")
+data <- read.csv("/data/pt_life/ResearchProjects/LLammer/si_update/Data/compiled_scaled_data.csv")
 # change this variable to "male" if appropriate
 variable <- "female"
 ### set path variable & modify dataset
 if(variable == "female"){
-  path = "/data/pt_life/ResearchProjects/LLammer/Results_female/"
+  path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_female/"
   data <- subset(data, data$sex == 0)
   } else{
-  path = "/data/pt_life/ResearchProjects/LLammer/Results_male/"
+  path = "/data/pt_life/ResearchProjects/LLammer/si_update/Results_male/"
   data <- subset(data, data$sex == 1)
   }
 
@@ -55,7 +55,7 @@ write.csv(vifres, file = paste0(path, "/VIFs/HCV_on_LSNS_base:age_change_model1.
 # unfortunately, we cannot expect that
 # hence, we will calculate the VIFs for every single model
 
-# to accelerate computation time we will not calculate bayesian statistics for this sensitivity analysis
+# to accelerate computation time we will to calculate bayesian statistics for this sensitivity analysis
 
 # create a histogram and a qq-plot of residuals & plot residuals against fitted values
 # save plots
@@ -296,4 +296,4 @@ rownames(pvals) <- hypotheses
 write.csv(pvals, file = paste0(path, "/pvals/overview.csv"))
 
 
-save.image(file = paste0(path, "/Workspace/workspace2.RData"))
+save.image(file = paste0(path, "/Workspace/workspace.RData"))
